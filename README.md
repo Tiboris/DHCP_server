@@ -1,22 +1,29 @@
 Společná část popisu:
-Vytvořte komunikující aplikaci podle konkrétní vybrané specifikace pomocí síťové knihovny BSD sockets (pokud není ve variantě zadání uvedeno jinak). Projekt bude vypracován v jazyce C/C++, přeložitelný a spustitelný v prostředí systému Unixového typu (testováno bude na virtuálním počítači Linux/Ubuntu http://nes.fit.vutbr.cz/isa/ISA2015.ova).
+Vytvořte komunikující aplikaci podle konkrétní vybrané specifikace pomocí síťové knihovny BSD sockets (pokud není ve variantě zadání uvedeno jinak). Projekt bude
+vypracován v jazyce C/C++, přeložitelný a spustitelný v prostředí systému Unixového typu (testováno bude na virtuálním počítači Linux/Ubuntu
+http://nes.fit.vutbr.cz/isa/ISA2015.ova).
 
     Vypracovaný projekt uložený v archívu .tar a se jménem xlogin00.tar odevzdejte elektronicky přes IS. Soubor nekomprimujte.
     Termín odevzdání je 20.11.2016 (hard deadline). Odevzdání emailem po uplynutí termínu není možné.
     Odevzdaný projekt musí obsahovat:
         soubor se zdrojovým kódem (dodržujte jména souborů uvedená v konkrétním zadání),
         funkční Makefile pro překlad zdrojového souboru,
-        dokumentaci (soubor manual.pdf), která bude obsahovat uvedení do problematiky, návrhu aplikace, popis implementace, základní informace o programu, návod na použití. V dokumentaci se očekává následující: titulní strana, obsah, logické strukturování textu, přehled nastudovaných informací z literatury, popis zajímavějších pasáží implementace, použití vytvořených programů a literatura.
+        dokumentaci (soubor manual.pdf), která bude obsahovat uvedení do problematiky, návrhu aplikace, popis implementace, základní informace o programu,
+        návod na použití. V dokumentaci se očekává následující: titulní strana, obsah, logické strukturování textu, přehled nastudovaných informací z literatury,
+        popis zajímavějších pasáží implementace, použití vytvořených programů a literatura.
         soubor README obsahující krátký textový popis programu s případnými rozšířeními/omezeními, příklad spuštění a seznam odevzdaných souborů,
         další požadované soubory podle konkrétního typu zadání.
     Pokud v projektu nestihnete implementovat všechny požadované vlastnosti, je nutné veškerá omezení jasně uvést v dokumentaci a v souboru README.
     Co není v zadání jednoznačně uvedeno, můžete implementovat podle svého vlastního výběru. Zvolené řešení popište v dokumentaci.
     Při řešení projektu respektujte zvyklosti zavedené v OS Unixového typu (jako je například formát textového souboru).
-    Vytvořené programy by měly být použitelné a smysluplné, řádně komentované a formátované a členěné do funkcí a modulů. Program by měl obsahovat nápovědu informující uživatele o činnosti programu a jeho parametrech. Případné chyby budou intuitivně popisovány uživateli.
+    Vytvořené programy by měly být použitelné a smysluplné, řádně komentované a formátované a členěné do funkcí a modulů. Program by měl obsahovat nápovědu
+    informující uživatele o činnosti programu a jeho parametrech. Případné chyby budou intuitivně popisovány uživateli.
     Aplikace nesmí v žádném případě skončit s chybou SEGMENTATION FAULT ani jiným násilným systémovým ukončením (např. dělení nulou).
-    Pokud přejímáte velmi krátké pasáže zdrojových kódů z různých tutoriálů či příkladů z Internetu (ne mezi sebou), tak je nutné vyznačit tyto sekce a jejich autory dle licenčních podmínek, kterými se distribuce daných zdrojových kódů řídí. V případě nedodržení bude na projekt nahlíženo jako na plagiát.
+    Pokud přejímáte velmi krátké pasáže zdrojových kódů z různých tutoriálů či příkladů z Internetu (ne mezi sebou), tak je nutné vyznačit tyto sekce a jejich autory dle
+    licenčních podmínek, kterými se distribuce daných zdrojových kódů řídí. V případě nedodržení bude na projekt nahlíženo jako na plagiát.
     Konzultace k projektu podává vyučující, který zadání vypsal.
-    Před odevzdáním zkontrolujte, zda jste dodrželi všechna jména souborů požadovaná ve společné části zadání i v zadání pro konkrétní projekt. Zkontrolujte, zda je projekt přeložitelný.
+    Před odevzdáním zkontrolujte, zda jste dodrželi všechna jména souborů požadovaná ve společné části zadání i v zadání pro konkrétní projekt.
+    Zkontrolujte, zda je projekt přeložitelný.
 
 Hodnocení projektu:
 
@@ -35,9 +42,12 @@ Hodnocení projektu:
 
 Instrukce pro spuštění virtuálního stroje:
 
-Virtuální stroj byl vytvořen programem VirtualBox. Pro import a spuštění ve VMWare postupujte podle návodů pro import virtuálních strojů vytvořených programem VirtualBox. Pokud budete mít problém se spuštěním systému, ověřte, že máte povoleno (VT-x, AMD-V apod.) v Bios. Pokud Váš CPU nepodporuje VT-x, zakažte jej v nastavení virtuální stanice: Nastavení -> Systém -> Akcelerace (VT-x, AMD-V).
+Virtuální stroj byl vytvořen programem VirtualBox. Pro import a spuštění ve VMWare postupujte podle návodů pro import virtuálních strojů vytvořených programem VirtualBox.
+Pokud budete mít problém se spuštěním systému, ověřte, že máte povoleno (VT-x, AMD-V apod.) v Bios. Pokud Váš CPU nepodporuje VT-x,
+zakažte jej v nastavení virtuální stanice: Nastavení -> Systém -> Akcelerace (VT-x, AMD-V).
 
-Pro zprovoznění virtuálního stroje není nutně potřeba hardwarová akcelerace. Pokud máte po přihlášení problémy s načtením výchozího prostředí Unity (černá obrazovka, automatický návrat na přihlašovací obrazovku, apod.), můžete použít méně graficky náročné prostředí Metacity. Pro zprovoznění Metacity lze použít např. následující postup:
+Pro zprovoznění virtuálního stroje není nutně potřeba hardwarová akcelerace. Pokud máte po přihlášení problémy s načtením výchozího prostředí Unity (černá obrazovka,
+automatický návrat na přihlašovací obrazovku, apod.), můžete použít méně graficky náročné prostředí Metacity. Pro zprovoznění Metacity lze použít např. následující postup:
 
 - Na přihlašovací obrazovce přejděte na textový terminál (např.
 stiskem Ctrl+Alt+F1).
@@ -56,7 +66,10 @@ výchozího Unity.
 Popis varianty:
 DHCP server
 
-Vaším úkolem bude naimplementovat program dserver, který bude fungovat jako jednoduchý DHCP server pro IPv4 v jazyce C/C++. Server poběží na standardním portu a bude podporovat zprávy DISCOVER, OFFER, REQUEST, ACK, NACK a RELEASE. Program bude podporovat parametry -p a -e, které jsou specifikovány níže. V případě, že se klient pokusí obnovit přiřazenou IP adresu před vypršením limitu, server by mu měl danou IP adresu ponechat.
+Vaším úkolem bude naimplementovat program dserver, který bude fungovat jako jednoduchý DHCP server pro IPv4 v jazyce C/C++.
+Server poběží na standardním portu a bude podporovat zprávy DISCOVER, OFFER, REQUEST, ACK, NACK a RELEASE.
+Program bude podporovat parametry -p a -e, které jsou specifikovány níže.
+V případě, že se klient pokusí obnovit přiřazenou IP adresu před vypršením limitu, server by mu měl danou IP adresu ponechat.
 
 Program se ukončí po obdržení signálu SIGINT.
 
@@ -81,7 +94,9 @@ Při obnovení IP adresy vypište stejný řádek s aktualizovaným časem vypr�
 
 Poznámky k implementaci
 
-    při vytváření programu je povoleno použít hlavičkové soubory pro práci se sokety a další obvyklé funkce používané v síťovém prostředí (jako je netinet/*, sys/*, arpa/* apod.), knihovnu pro práci s vlákny (pthread), signály, časem, stejně jako standardní knihovnu jazyka C (varianty ISO/ANSI i POSIX), C++ a STL
+    při vytváření programu je povoleno použít hlavičkové soubory pro práci se sokety a další obvyklé funkce používané
+    v síťovém prostředí (jako je netinet/*, sys/*, arpa/* apod.), knihovnu pro práci s vlákny (pthread), signály, časem,
+    stejně jako standardní knihovnu jazyka C (varianty ISO/ANSI i POSIX), C++ a STL
     použití jakýchkoliv jiných knihoven je vždy nutné konzultovat
     pořádně si přečtěte společné zadání ke všem projektům a dejte si pozor na správné pojmenování všech souborů
     dotazy směřujte především do fóra, pomůžete tím i spolužákům
