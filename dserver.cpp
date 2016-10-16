@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <csignal>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -38,6 +39,7 @@ const string ERR_ARG_2 = "' argument in wrong format\n";
 const string ERR_OPT = "./dserver: invalid option(s) " ;
 const string ERR_IP_FORMAT = "Wrong IP address format: " ;
 
+void sig_handler(int signal);
 bool opt_err(int argc, char** argv, settings* args);
 bool arg_err(char option, string optarg_val, settings* args);
 unsigned int mystrtoui(string optarg_val);
@@ -52,10 +54,30 @@ int main(int argc, char** argv)
     {
         return EXIT_FAILURE;
     }
+    cout<<"Network: \t"<<args.network<<"\nCIRD Mask:\t"<< args.cmask<<endl;
+    if (args.exclude) {
+        cout<< "IP EXCLUDE LIST:";
 
-    cout<<("OK")<<endl;
+        for (auto it=args.exclude_list.begin(); it<args.exclude_list.end(); it++)
+            cout  <<*it << "\n\t\t";
+        cout<<endl;
+    }
+    signal(SIGINT, sig_handler);
+    while (true)
+    {
+        /* code */
+    }
     return EXIT_SUCCESS;
 }
+void sig_handler(int signal)
+{
+    cout << "Interrupt signal (" << signal << ") received.\n";
+    // cleanup and close up stuff here
+    // terminate program
+    exit(signal);
+}
+
+
 /*
 *   For checking argument
 */
@@ -170,12 +192,14 @@ bool arg_err(char option, string optarg_val, settings* args)
         }
         if (wrong_ipaddr_format(optarg_val))
         {
+            cout<< "HERE";
             cerr << ERR_IP_FORMAT << optarg_val << endl;
             return EXIT_FAILURE;
         }
         // Musi byt este jeden pretoze potom poslednu polozku z listu neulozi
         args->exclude_list.insert(args->exclude_list.end(), optarg_val);
     }
+
     return EXIT_SUCCESS;
 }
 
