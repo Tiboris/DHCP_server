@@ -44,15 +44,19 @@ int main(int argc, char** argv)
 */
 bool args_err(int argc, char** argv)
 {
-    if (argc == 1)
+    unsigned int min_opt_cnt = 2;
+    if (argc < min_opt_cnt)
     {
+        fprintf (stderr, "./dserver: at least option -- 'p' is needed\n\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n");
         return EXIT_FAILURE;
     }
     unsigned int pflag = 0;
     unsigned int eflag = 0;
+    unsigned int max_opt_cnt = 1;
     //bool sflag = false;
     char *cvalue = NULL;
     int c;
+    unsigned int f = 0;
 
     while ((c = getopt (argc, argv, "p:e:")) != -1)
     switch (c)
@@ -64,7 +68,9 @@ bool args_err(int argc, char** argv)
                 return EXIT_FAILURE;
             }
             cvalue = optarg;
-            pflag = !pflag;
+            pflag++;
+            f = f+1;
+            max_opt_cnt += 2;
             break;
 
         case 'e':
@@ -73,35 +79,34 @@ bool args_err(int argc, char** argv)
                 return EXIT_FAILURE;
             }
             cvalue = optarg;
-            eflag = !eflag;
+            eflag++;
+            max_opt_cnt += 2;
+            f = f+1;
+
             break;
 
         case '?':
             if (optopt == 'p' || optopt == 'e')
             {
-                if (optopt == 'p' && pflag )
-                {
-                    fprintf (stderr, "\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n");
-                }
-                else if (optopt == 'e' && eflag )
-                {
-                    fprintf (stderr, "\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n");
-                }
-                else
-                {
-                    fprintf (stderr, "\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n");
-                }
-            }
-            else if (isprint (optopt))
-            {
                 fprintf (stderr, "\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n");
             }
-            else
+            else if ( ! isprint (optopt))
+            {
                 fprintf (stderr,"Unknown option character `\\x%x'\n\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n", optopt);
-            return EXIT_FAILURE;
+            }
 
         default:
             return EXIT_FAILURE;
+    }
+    if (argc > max_opt_cnt)
+    {
+        fprintf (stderr, "./dserver: unknown option(s) ");
+        for (size_t i = max_opt_cnt; i < argc; i++)
+        {
+            fprintf(stderr, "-- '%s' ",argv[i] );
+        }
+        fprintf(stderr, "\n\tusage: ./dserver -p <ip_address/mask> [-e <ip_address_list>]\n", c);
+        return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
