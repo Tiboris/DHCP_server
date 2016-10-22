@@ -15,7 +15,6 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         {
             return EXIT_FAILURE;
         }
-        //cut(char* str, size_t pos, char* dst)
         char result[INET_ADDRSTRLEN];
         cut(optarg_val, 0, pos, result);
         if ((scope->network_addr = strtoip(result)) == INVALID_IP)
@@ -60,7 +59,6 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             start_pos = start_pos + pos + delimiter.length();
             scope->exclude_list.insert(scope->exclude_list.end(), exclude);
         }
-        printf("%d\n",start_pos );
         cut(optarg_val, start_pos, start_pos + tmp.length(), result);
         if ((exclude = strtoip(result)) == INVALID_IP)
         {
@@ -173,7 +171,6 @@ unsigned int strtoip(const char* ip_in)
 void cut(char* src, size_t from, size_t to, char* dst)
 {
     size_t i;
-    printf("%d %d\n%s\n",from, to ,src );
     for (i = from; i < to ; i++)
     {
         dst[i-from]=src[i];

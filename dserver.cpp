@@ -69,28 +69,24 @@ int main(int argc, char** argv)
     {
         return EXIT_FAILURE;
     }
-    printf("lalala\n" );
-    //scope = set_scope(scope);
-    cout<<"Network: \t"<<scope.network_addr<<"\nCIRD Mask:\t"<< scope.mask<<endl;
-    if (scope.exclude)
-    {
-        cout<< "IP EXCLUDE LIST:";
-        for (auto it=scope.exclude_list.begin(); it<scope.exclude_list.end(); it++)
-        {
-            cout  <<*it << "\n\t\t";
-            //printf("%s\n", inet_ntoa(*it));
-        }
-    }
 
     struct in_addr ip_addr;
     ip_addr.s_addr = scope.network_addr ;
-    printf("\nThe NW is %s\n", inet_ntoa(ip_addr));
+    printf("The NW is %s\n", inet_ntoa(ip_addr));
     ip_addr.s_addr = scope.dhcp_srv_addr ;
     printf("The IP is %s\n", inet_ntoa(ip_addr));
     ip_addr.s_addr = scope.mask ;
     printf("The MS is %s\n", inet_ntoa(ip_addr));
-    ip_addr.s_addr = scope.exclude ;
-    printf("The E is %s\n", inet_ntoa(ip_addr));
+    if (scope.exclude)
+    {
+        cout<< "IP EXCLUDE LIST:\n";
+        for (auto it=scope.exclude_list.begin(); it<scope.exclude_list.end(); it++)
+        {
+            //cout  <<*it << "\n\t\t";
+            ip_addr.s_addr = *it;
+            printf("\t%s\n", inet_ntoa(ip_addr));
+        }
+    }
     ip_addr.s_addr = scope.free_addr ;
     printf("The FR is %s\n", inet_ntoa(ip_addr));
     ip_addr.s_addr = scope.broadcast ;
@@ -98,7 +94,7 @@ int main(int argc, char** argv)
 
     while (true)
     {
-        /* code */
+        return EXIT_SUCCESS;
     }
     return EXIT_SUCCESS;
 }
