@@ -17,7 +17,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         }
         char result[INET_ADDRSTRLEN];
         cut(optarg_val, 0, pos, result);
-        if ((scope->network_addr = strtoip(result)) == INVALID_IP)
+        if ((scope->network_addr = strtoip(result)) == UINT32_MAX)
         {
             cerr << ERR_IP_FORMAT << optarg_val << endl;
             return EXIT_FAILURE;
@@ -35,8 +35,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         scope->mask = ~ scope->mask;
         scope->dhcp_srv_addr = htonl(scope->network_addr);
         scope->dhcp_srv_addr++;
-        scope->free_addr = scope->dhcp_srv_addr + 1 ;
-        scope->free_addr = htonl(scope->free_addr);
+        scope->first_addr = htonl(scope->dhcp_srv_addr + 1);
         scope->dhcp_srv_addr = htonl(scope->dhcp_srv_addr);
     }
     else if (option == 'e')
@@ -51,7 +50,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             string token = tmp.substr(0, pos);
             tmp.erase(0, pos + delimiter.length());
             cut(optarg_val, start_pos, pos+start_pos, result);
-            if ((exclude = strtoip(result)) == INVALID_IP)
+            if ((exclude = strtoip(result)) == UINT32_MAX)
             {
                 cerr << ERR_IP_FORMAT << token << endl;
                 return EXIT_FAILURE;
@@ -60,7 +59,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             scope->exclude_list.insert(scope->exclude_list.end(), exclude);
         }
         cut(optarg_val, start_pos, start_pos + tmp.length(), result);
-        if ((exclude = strtoip(result)) == INVALID_IP)
+        if ((exclude = strtoip(result)) == UINT32_MAX)
         {
             cerr << ERR_IP_FORMAT << result << endl;
             return EXIT_FAILURE;
@@ -80,8 +79,8 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
         cerr << ERR_NO_ARGS << USAGE;
         return EXIT_FAILURE;
     }
-    unsigned int pflag = 0;
-    unsigned int eflag = 0;
+    u_int32_t pflag = 0;
+    u_int32_t eflag = 0;
     int max_argc_val = 1;
     int c;
     while ((c = getopt (argc, argv, "p:e:")) != -1)
@@ -138,7 +137,7 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
         cerr<<ERR_OPT;
         for (int i = max_argc_val; i < argc; i++)
         {
-            fprintf(stderr, "-- '%s' ",argv[i] );
+            cerr<< "-- '"<< argv[i] <<"' ";
         }
         cerr << USAGE;
         return EXIT_FAILURE;
@@ -146,7 +145,7 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
     return EXIT_SUCCESS;
 }
 
-unsigned int mystrtoui(string optarg_val)
+u_int32_t mystrtoui(string optarg_val)
 {
     if (optarg_val == "")
     {
@@ -162,10 +161,10 @@ unsigned int mystrtoui(string optarg_val)
     return stoul(optarg_val,nullptr,10);
 }
 
-unsigned int strtoip(const char* ip_in)
+u_int32_t strtoip(const char* ip_in)
 {
     struct in_addr ip_addr;
-    return (inet_aton(ip_in, &ip_addr) == 0) ? INVALID_IP : ip_addr.s_addr;
+    return (inet_aton(ip_in, &ip_addr) == 0) ? UINT32_MAX : ip_addr.s_addr;
 }
 
 void cut(char* src, size_t from, size_t to, char* dst)

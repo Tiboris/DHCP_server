@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <algorithm>
 
 #include "argparser.cpp"
 
@@ -43,22 +44,10 @@ typedef struct struct_dhcp_packet
 	char options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
 }dhcp_packet;
 
-typedef struct struct_ip_addr_scope_in
-{
-    u_int32_t network_addr;
-    u_int32_t dhcp_srv_addr;
-    u_int32_t mask = UINT32_MAX;
-    bool exclude = false;
-    vector<u_int32_t> exclude_list;
-    u_int32_t free_addr;
-    u_int32_t broadcast;
-}scope_in;
-
-//scope_in set_scope(settings scope);
 /*
 *   Main
 */
-
+u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip);
 void sig_handler(int signal);
 
 int main(int argc, char** argv)
@@ -80,18 +69,29 @@ int main(int argc, char** argv)
     if (scope.exclude)
     {
         cout<< "IP EXCLUDE LIST:\n";
-        for (auto it=scope.exclude_list.begin(); it<scope.exclude_list.end(); it++)
+        for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
         {
-            //cout  <<*it << "\n\t\t";
-            ip_addr.s_addr = *it;
+            ip_addr.s_addr = *item;
             printf("\t%s\n", inet_ntoa(ip_addr));
         }
     }
-    ip_addr.s_addr = scope.free_addr ;
+    ip_addr.s_addr = scope.first_addr ;
     printf("The FR is %s\n", inet_ntoa(ip_addr));
     ip_addr.s_addr = scope.broadcast ;
     printf("The BR is %s\n", inet_ntoa(ip_addr));
 
+    ip_addr.s_addr = get_ip_addr(&scope, scope.first_addr);
+    printf("Offers: %s\n", inet_ntoa(ip_addr));
+
+    if (scope.exclude)
+    {
+        cout<< "IP EXCLUDE LIST:\n";
+        for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
+        {
+            ip_addr.s_addr = *item;
+            printf("\t%s\n", inet_ntoa(ip_addr));
+        }
+    }
     while (true)
     {
         return EXIT_SUCCESS;
@@ -103,4 +103,31 @@ void sig_handler(int signal)
 {
     cout << "\nInterrupt signal (" << signal << ") received.\n";
     exit(signal);
+}
+
+u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip)
+{
+    u_int32_t offered_ip = ip;
+    if (ip == scope->broadcast) //
+    {
+        return UINT32_MAX;
+    }
+    else if (scope->exclude_list.empty())
+    {
+        scope->exclude = true;
+        scope->exclude_list.insert(scope->exclude_list.end(), offered_ip);
+        return offered_ip;
+    }
+    else if (find(scope->exclude_list.begin(), scope->exclude_list.end(), offered_ip) != scope->exclude_list.end())
+    {
+        offered_ip = htonl(offered_ip);
+        offered_ip++;
+        offered_ip = htonl(offered_ip);
+        return get_ip_addr(scope, offered_ip);
+    }
+    else
+    {
+        scope->exclude_list.insert(scope->exclude_list.end(), offered_ip);
+        return offered_ip;
+    }
 }

@@ -17,8 +17,6 @@
 #define ERR_OPT "./dserver: invalid option(s) "
 #define ERR_IP_FORMAT "Wrong IP address format: "
 
-unsigned int INVALID_IP = -1;
-
 using namespace std;
 
 typedef struct scope_settings_struct
@@ -28,7 +26,7 @@ typedef struct scope_settings_struct
     u_int32_t mask = UINT32_MAX;
     bool exclude = false;
     vector<u_int32_t> exclude_list;
-    u_int32_t free_addr;
+    u_int32_t first_addr;
     u_int32_t broadcast;
 }scope_settings;
 
@@ -36,9 +34,9 @@ bool opt_err(int argc, char** argv, scope_settings* args);
 
 bool arg_err(char option, string optarg_val, scope_settings* args);
 
-unsigned int mystrtoui(string optarg_val);
+u_int32_t mystrtoui(string optarg_val);
 
-unsigned int strtoip(const char* ip_in);
+u_int32_t strtoip(const char* ip_in);
 
 void cut(char* src, size_t from, size_t to, char* dst);
 
