@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
+#include <arpa/inet.h>
 
-#define MAX_OCTET_CNT 4
 #define MAX_OCTET_NUM 255
 #define USAGE "\tusage: ./dserver -p <network_address/CIRD> [-e <ip_address_list>]\n"
 #define ERR_NO_ARGS "./dserver: at least option -- 'p' is needed\n"
@@ -17,22 +17,29 @@
 #define ERR_OPT "./dserver: invalid option(s) "
 #define ERR_IP_FORMAT "Wrong IP address format: "
 
+unsigned int INVALID_IP = -1;
+
 using namespace std;
 
-struct settings
+typedef struct scope_settings_struct
 {
-    string network;
-    unsigned int cmask;
+    u_int32_t network_addr;
+    u_int32_t dhcp_srv_addr;
+    u_int32_t mask = UINT32_MAX;
     bool exclude = false;
-    vector<string> exclude_list;
-};
+    vector<u_int32_t> exclude_list;
+    u_int32_t free_addr;
+    u_int32_t broadcast;
+}scope_settings;
 
-bool opt_err(int argc, char** argv, settings* args);
+bool opt_err(int argc, char** argv, scope_settings* args);
 
-bool arg_err(char option, string optarg_val, settings* args);
+bool arg_err(char option, string optarg_val, scope_settings* args);
 
 unsigned int mystrtoui(string optarg_val);
 
-bool wrong_ipaddr_format(string ip);
+unsigned int strtoip(const char* ip_in);
+
+void cut(char* src, size_t from, size_t to, char* dst);
 
 #endif

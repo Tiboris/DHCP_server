@@ -1,58 +1,80 @@
 #include "argparser.hpp"
-
+/*
+ *  Argument parser for dserver.cpp as school project to ISA class
+ */
 using namespace std;
 
-bool arg_err(char option, string optarg_val, settings* args)
+bool arg_err(char option, char* optarg_val, scope_settings* scope)
 {
     size_t pos = 0;
     if (option == 'p')
     {
         string delimiter = "/";
-        if ((pos = optarg_val.find(delimiter)) == string::npos)
+        string tmp = static_cast<string>(optarg_val);
+        if ((pos =  tmp.find(delimiter)) == string::npos)
         {
             return EXIT_FAILURE;
         }
-        args->network = optarg_val.substr(0, pos);
-        if (wrong_ipaddr_format(args->network))
-        {
-            cerr << ERR_IP_FORMAT << args->network << endl;
-            return EXIT_FAILURE;
-        }
-        optarg_val.erase(0, pos + delimiter.length());
-        args->cmask = mystrtoui(optarg_val);
-        if ((args->cmask == 0) || (args->cmask > 30 ))
-        {
-            cerr << "CIRD mask '" << optarg_val << "' NOT supported."<< endl;
-            return EXIT_FAILURE;
-        }
-    }
-    else if (option == 'e')
-    {
-        string delimiter = ",";
-        while ((pos = optarg_val.find(delimiter)) != string::npos)
-        {
-            string token = optarg_val.substr(0, pos);
-            if (wrong_ipaddr_format(token))
-            {
-                cerr << ERR_IP_FORMAT << token << endl;
-                return EXIT_FAILURE;
-            }
-            args->exclude_list.insert(args->exclude_list.end(), token);
-            optarg_val.erase(0, pos + delimiter.length());
-        }
-        if (wrong_ipaddr_format(optarg_val))
+        //cut(char* str, size_t pos, char* dst)
+        char result[INET_ADDRSTRLEN];
+        cut(optarg_val, 0, pos, result);
+        if ((scope->network_addr = strtoip(result)) == INVALID_IP)
         {
             cerr << ERR_IP_FORMAT << optarg_val << endl;
             return EXIT_FAILURE;
         }
-        // has to be one more insert otherways last ip in list will be skipped
-        args->exclude_list.insert(args->exclude_list.end(), optarg_val);
+        tmp.erase(0, pos + delimiter.length());
+        int cmask = mystrtoui(tmp); // > MAX_OCTET_NUM
+        if ((cmask == 0) || (cmask > 30 ))
+        {
+            cerr << "CIRD mask '/" << tmp << "' NOT supported."<< endl;
+            return EXIT_FAILURE;
+        }
+        scope->mask = scope->mask >> cmask;
+        scope->mask = htonl(scope->mask);
+        scope->broadcast = scope->network_addr + scope->mask;
+        scope->mask = ~ scope->mask;
+        scope->dhcp_srv_addr = htonl(scope->network_addr);
+        scope->dhcp_srv_addr++;
+        scope->free_addr = scope->dhcp_srv_addr + 1 ;
+        scope->free_addr = htonl(scope->free_addr);
+        scope->dhcp_srv_addr = htonl(scope->dhcp_srv_addr);
+    }
+    else if (option == 'e')
+    {
+        string delimiter = ",";
+        u_int32_t exclude;
+        size_t start_pos = 0;
+        char result[INET_ADDRSTRLEN];
+        string tmp = static_cast<string>(optarg_val);
+        while ((pos = tmp.find(delimiter)) != string::npos)
+        {
+            string token = tmp.substr(0, pos);
+            tmp.erase(0, pos + delimiter.length());
+            cut(optarg_val, start_pos, pos+start_pos, result);
+            if ((exclude = strtoip(result)) == INVALID_IP)
+            {
+                cerr << ERR_IP_FORMAT << token << endl;
+                return EXIT_FAILURE;
+            }
+            start_pos = start_pos + pos + delimiter.length();
+            scope->exclude_list.insert(scope->exclude_list.end(), exclude);
+        }
+        printf("%d\n",start_pos );
+        cut(optarg_val, start_pos, start_pos + tmp.length(), result);
+        if ((exclude = strtoip(result)) == INVALID_IP)
+        {
+            cerr << ERR_IP_FORMAT << result << endl;
+            return EXIT_FAILURE;
+        }
+        //has to be one more insert otherways last ip in list will be skipped
+        scope->exclude_list.insert(scope->exclude_list.end(), exclude);
     }
 
     return EXIT_SUCCESS;
 }
 
-bool opt_err(int argc, char** argv, settings* args)
+bool opt_err(int argc, char** argv, scope_settings* scope)
 {
     int min_opt_cnt = 2;
     if (argc < min_opt_cnt)
@@ -74,7 +96,7 @@ bool opt_err(int argc, char** argv, settings* args)
                     cerr << ERR_MULTIPLE_OPT << (char)c << endl << USAGE;
                     return EXIT_FAILURE;
                 }
-                if (arg_err(c, static_cast<string>(optarg), args ))
+                if (arg_err(c, optarg, scope ))
                 {
                     cerr << ERR_ARG_1 << (char)c << ERR_ARG_2 << USAGE;
                     return EXIT_FAILURE;
@@ -89,8 +111,8 @@ bool opt_err(int argc, char** argv, settings* args)
                     cerr << ERR_MULTIPLE_OPT << (char)c << endl << USAGE;
                     return EXIT_FAILURE;
                 }
-                args->exclude = !args->exclude;
-                if (arg_err(c, static_cast<string>(optarg), args ))
+                scope->exclude = !scope->exclude;
+                if (arg_err(c, optarg, scope ))
                 {
                     cerr << ERR_ARG_1 << (char)c << ERR_ARG_2 << USAGE;
                     return EXIT_FAILURE;
@@ -130,31 +152,32 @@ unsigned int mystrtoui(string optarg_val)
 {
     if (optarg_val == "")
     {
-        return MAX_OCTET_NUM + 1;
+        return MAX_OCTET_NUM;
     }
     for (auto i = optarg_val.begin(); i != optarg_val.end(); i++)
     {
         if (!isdigit(*i))
         {
-            return MAX_OCTET_NUM + 1;
+            return MAX_OCTET_NUM;
         }
     }
     return stoul(optarg_val,nullptr,10);
 }
 
-bool wrong_ipaddr_format(string ip)
+unsigned int strtoip(const char* ip_in)
 {
-    size_t pos = 0;
-    string delimiter = ".";
-    for (size_t octet = 1; octet <= MAX_OCTET_CNT; octet++)
+    struct in_addr ip_addr;
+    return (inet_aton(ip_in, &ip_addr) == 0) ? INVALID_IP : ip_addr.s_addr;
+}
+
+void cut(char* src, size_t from, size_t to, char* dst)
+{
+    size_t i;
+    printf("%d %d\n%s\n",from, to ,src );
+    for (i = from; i < to ; i++)
     {
-        pos = ip.find(delimiter);
-        if( (pos == string::npos && octet != MAX_OCTET_CNT) ||
-            ((mystrtoui(ip.substr(0, pos))) > MAX_OCTET_NUM) )
-        {
-            return EXIT_FAILURE;
-        }
-        ip.erase(0, pos + delimiter.length());
+        dst[i-from]=src[i];
     }
-    return EXIT_SUCCESS;
+    dst[i]='\0';
+    return;
 }

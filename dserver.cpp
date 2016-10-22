@@ -6,11 +6,10 @@
 #include <regex>
 #include <netinet/in.h>
 #include <unistd.h>
-
 #include <netdb.h>
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #include "argparser.cpp"
 
@@ -19,118 +18,93 @@
 #define MAX_OCTET_NUM 255
 
 using namespace std;
-/*
-* Prototypes of functions
-*/
 
+#define MAX_DHCP_CHADDR_LENGTH           16
+#define MAX_DHCP_SNAME_LENGTH            64
+#define MAX_DHCP_FILE_LENGTH             128
+#define MAX_DHCP_OPTIONS_LENGTH          312
 
-// typedef struct dhcp_packet_struct{
-//     u_int8_t  op;                   /* packet type */
-//     u_int8_t  htype;                /* type of hardware address for this machine (Ethernet, etc) */
-//     u_int8_t  hlen;                 /* length of hardware address (of this machine) */
-//     u_int8_t  hops;                 /* hops */
-//     u_int32_t xid;                  /* random transaction id number - chosen by this machine */
-//     u_int16_t secs;                 /* seconds used in timing */
-//     u_int16_t flags;                /* flags */
-//     struct in_addr ciaddr;          /* IP address of this machine (if we already have one) */
-//     struct in_addr yiaddr;          /* IP address of this machine (offered by the DHCP server) */
-//     struct in_addr siaddr;          /* IP address of DHCP server */
-//     struct in_addr giaddr;          /* IP address of DHCP relay */
-//     unsigned char chaddr [MAX_DHCP_CHADDR_LENGTH];      /* hardware address of this machine */
-//     char sname [MAX_DHCP_SNAME_LENGTH];    /* name of DHCP server */
-//     char file [MAX_DHCP_FILE_LENGTH];      /* boot file name (used for diskless booting?) */
-// 	char options[MAX_DHCP_OPTIONS_LENGTH];  /* options */
-// }dhcp_packet;
-//
-//
-// typedef struct dhcp_offer_struct{
-// 	struct in_addr server_address;   /* address of DHCP server that sent this offer */
-// 	struct in_addr offered_address;  /* the IP address that was offered to us */
-// 	u_int32_t lease_time;            /* lease time in seconds */
-// 	u_int32_t renewal_time;          /* renewal time in seconds */
-// 	u_int32_t rebinding_time;        /* rebinding time in seconds */
-// 	struct dhcp_offer_struct *next;
-// }dhcp_offer;
-//
-//
-//
+typedef struct struct_dhcp_packet
+{
+    u_int8_t  op;                   /* packet type */
+    u_int8_t  htype;                /* type of hardware address for client machine */
+    u_int8_t  hlen;                 /* length of client hardware address */
+    u_int8_t  hops;                 /* hops */
+    u_int32_t xid;                  /* random transaction id number - chosen by client */
+    u_int16_t secs;                 /* seconds used in timing */
+    u_int16_t flags;                /* flags */
+    u_int32_t ciaddr;               /* IP address of client machine (if client already have one) */
+    u_int32_t yiaddr;               /* IP address of client machine (offered by this the DHCP server) */
+    u_int32_t siaddr;               /* IP address of this DHCP server */
+    u_int32_t giaddr;               /* IP address of DHCP relay */
+    unsigned char chaddr [MAX_DHCP_CHADDR_LENGTH];      /* hardware address of client machine */
+    char sname [MAX_DHCP_SNAME_LENGTH];    /* name of DHCP server */
+    char file [MAX_DHCP_FILE_LENGTH];      /* boot file name (used for diskless booting?) */
+	char options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
+}dhcp_packet;
 
-void sig_handler(int signal);
+typedef struct struct_ip_addr_scope_in
+{
+    u_int32_t network_addr;
+    u_int32_t dhcp_srv_addr;
+    u_int32_t mask = UINT32_MAX;
+    bool exclude = false;
+    vector<u_int32_t> exclude_list;
+    u_int32_t free_addr;
+    u_int32_t broadcast;
+}scope_in;
 
+//scope_in set_scope(settings scope);
 /*
 *   Main
 */
-#include <err.h>
-#include <arpa/inet.h>
-#define BUFFER	(1024)   // length of the receiving buffer
 
+void sig_handler(int signal);
 
 int main(int argc, char** argv)
 {
-    settings args;
-    if (opt_err(argc, argv, &args))
+    signal(SIGINT, sig_handler);
+    scope_settings scope;
+    if ( opt_err(argc, argv, &scope) )
     {
         return EXIT_FAILURE;
     }
-    cout<<"Network: \t"<<args.network<<"\nCIRD Mask:\t"<< args.cmask<<endl;
-    if (args.exclude)
+    printf("lalala\n" );
+    //scope = set_scope(scope);
+    cout<<"Network: \t"<<scope.network_addr<<"\nCIRD Mask:\t"<< scope.mask<<endl;
+    if (scope.exclude)
     {
         cout<< "IP EXCLUDE LIST:";
-        for (auto it=args.exclude_list.begin(); it<args.exclude_list.end(); it++)
+        for (auto it=scope.exclude_list.begin(); it<scope.exclude_list.end(); it++)
         {
             cout  <<*it << "\n\t\t";
+            //printf("%s\n", inet_ntoa(*it));
         }
     }
-    cout<<endl;
-    signal(SIGINT, sig_handler);
 
-    int fd;                           // an incoming socket descriptor
-    struct sockaddr_in server;        // server's address structure
-    int n, r;
-    char buffer[BUFFER];              // receiving buffer
-    struct sockaddr_in client;        // client's address structure
-    socklen_t length;
+    struct in_addr ip_addr;
+    ip_addr.s_addr = scope.network_addr ;
+    printf("\nThe NW is %s\n", inet_ntoa(ip_addr));
+    ip_addr.s_addr = scope.dhcp_srv_addr ;
+    printf("The IP is %s\n", inet_ntoa(ip_addr));
+    ip_addr.s_addr = scope.mask ;
+    printf("The MS is %s\n", inet_ntoa(ip_addr));
+    ip_addr.s_addr = scope.exclude ;
+    printf("The E is %s\n", inet_ntoa(ip_addr));
+    ip_addr.s_addr = scope.free_addr ;
+    printf("The FR is %s\n", inet_ntoa(ip_addr));
+    ip_addr.s_addr = scope.broadcast ;
+    printf("The BR is %s\n", inet_ntoa(ip_addr));
 
-    server.sin_family = AF_INET;                     // set IPv4 addressing
-    server.sin_addr.s_addr = htonl(INADDR_ANY);      // the server listens to any interface
-    server.sin_port = htons(PORT);                   // the server listens on this port
-
-    printf("opening UDP socket(...)\n");
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) // create the server UDP socket
-        err(1, "socket() failed");
-
-    printf("binding to the port %d (%d)\n",PORT,server.sin_port);
-    if (bind(fd, (struct sockaddr *)&server, sizeof(server)) == -1) // binding with the port
-        err(1, "bind() failed");
-    length = sizeof(client);
-
-
-
-    while ((n= recvfrom(fd, buffer, BUFFER, 0, (struct sockaddr *)&client, &length)) >= 0)
+    while (true)
     {
-        printf("Request received from %s, port %d\n",inet_ntoa(client.sin_addr),ntohs(client.sin_port));
-
-        for (r = 0; r < n; r++)
-            if (islower(buffer[r]))
-                buffer[r] = toupper(buffer[r]);
-            else if (isupper(buffer[r]))
-                buffer[r] = tolower(buffer[r]);
-            r = sendto(fd, buffer, n, 0, (struct sockaddr *)&client, length); // send the answer
-            if (r == -1)
-                err(1, "sendto()");
-            else if (r != n)
-                errx(1, "sendto(): Buffer written just partially");
-            else
-                printf("data \"%.*s\" sent from port %d to %s, port %d\n",r-1,buffer,ntohs(server.sin_port), inet_ntoa(client.sin_addr),ntohs(client.sin_port));
+        /* code */
     }
-    printf("closing socket\n");
-    close(fd);
     return EXIT_SUCCESS;
 }
+
 void sig_handler(int signal)
 {
-    cout << "Interrupt signal (" << signal << ") received.\n";
-    // cleanup and close up stuff here
-    // terminate program
+    cout << "\nInterrupt signal (" << signal << ") received.\n";
     exit(signal);
 }

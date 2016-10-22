@@ -30,3 +30,4 @@
 dserver
 dhcp.c
 rfc2131.pdf
+*.txt
