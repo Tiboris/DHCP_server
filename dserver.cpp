@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     signal(SIGINT, sig_handler);
     scope_settings scope;
     if ( opt_err(argc, argv, &scope) )
-    {
+    {// if there are wrong arguments program fails
         return EXIT_FAILURE;
     }
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     printf("The IP is %s\n", inet_ntoa(ip_addr));
     ip_addr.s_addr = scope.mask ;
     printf("The MS is %s\n", inet_ntoa(ip_addr));
-    if (scope.exclude)
+    if (scope.exclude_list.begin()!=scope.exclude_list.end())
     {
         cout<< "IP EXCLUDE LIST:\n";
         for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     ip_addr.s_addr = get_ip_addr(&scope, scope.first_addr);
     printf("Offers: %s\n", inet_ntoa(ip_addr));
 
-    if (scope.exclude)
+    if (scope.exclude_list.begin()!=scope.exclude_list.end())
     {
         cout<< "IP EXCLUDE LIST:\n";
         for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
@@ -108,25 +108,19 @@ void sig_handler(int signal)
 u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip)
 {
     u_int32_t offered_ip = ip;
-    if (ip == scope->broadcast) //
-    {
+    if (ip == scope->broadcast)
+    {   // when free address is broadcast we are out of addresses in scope
         return UINT32_MAX;
     }
-    else if (scope->exclude_list.empty())
-    {
-        scope->exclude = true;
-        scope->exclude_list.insert(scope->exclude_list.end(), offered_ip);
-        return offered_ip;
-    }
     else if (find(scope->exclude_list.begin(), scope->exclude_list.end(), offered_ip) != scope->exclude_list.end())
-    {
+    {// when address is already in use or in exclude_list we skip and try again
         offered_ip = htonl(offered_ip);
-        offered_ip++;
+        offered_ip++; // next address might be usable
         offered_ip = htonl(offered_ip);
         return get_ip_addr(scope, offered_ip);
     }
     else
-    {
+    {// return first usable address and then add it to exclude_list
         scope->exclude_list.insert(scope->exclude_list.end(), offered_ip);
         return offered_ip;
     }
