@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <algorithm>
+#include <netinet/in.h>
+#include <thread>
 
 #include "argparser.cpp"
 
@@ -19,11 +21,14 @@
 #define MAX_OCTET_NUM 255
 
 using namespace std;
-
+#define SIZE 9
+#define MAX_CLIENTS 8
 #define MAX_DHCP_CHADDR_LENGTH           16
 #define MAX_DHCP_SNAME_LENGTH            64
 #define MAX_DHCP_FILE_LENGTH             128
 #define MAX_DHCP_OPTIONS_LENGTH          312
+
+int sock = -1; // socket has to be closed after SIGINT;
 
 typedef struct struct_dhcp_packet
 {
@@ -38,19 +43,22 @@ typedef struct struct_dhcp_packet
     u_int32_t yiaddr;               /* IP address of client machine (offered by this the DHCP server) */
     u_int32_t siaddr;               /* IP address of this DHCP server */
     u_int32_t giaddr;               /* IP address of DHCP relay */
-    unsigned char chaddr [MAX_DHCP_CHADDR_LENGTH];      /* hardware address of client machine */
-    char sname [MAX_DHCP_SNAME_LENGTH];    /* name of DHCP server */
-    char file [MAX_DHCP_FILE_LENGTH];      /* boot file name (used for diskless booting?) */
-	char options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
+    unsigned char chaddr [MAX_DHCP_CHADDR_LENGTH];  /* hardware address of client machine */
+    char sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
+    char file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
+	char options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
 }dhcp_packet;
 
-/*
-*   Main
-*/
 u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip);
 bool item_in_list(u_int32_t item, vector<u_int32_t> list);
 void sig_handler(int signal);
-
+bool listen(scope_settings scope);
+int create_socket();bool
+begin_listen(scope_settings scope, int* sock);
+void handle_request(int cli_socket);
+/*
+*   Main
+*/
 int main(int argc, char** argv)
 {
     signal(SIGINT, sig_handler);
@@ -93,17 +101,89 @@ int main(int argc, char** argv)
             printf("\t%s\n", inet_ntoa(ip_addr));
         }
     }
+    printf("\nBEGIN LISTEN:\n\n");
+    return begin_listen(scope, &sock);
+}
+
+void handle_request(int cli_socket)
+{
+    exit(0);
+}
+
+bool begin_listen(scope_settings scope, int* sock)
+{
+    *sock = create_socket();
+    if (*sock == -1)
+    {
+        cerr<< "ERR creating socket\n";
+        return EXIT_FAILURE;
+    }
+    struct sockaddr_in c_addr;
+    // Start listening to clients max 10 9 in queue on socket s
+    listen(*sock,MAX_CLIENTS);
+    socklen_t c_len = sizeof(c_addr);
+    char buff[SIZE];
+    // handling server run
     while (true)
     {
-        return EXIT_SUCCESS;
+        int cli_socket = recvfrom(*sock, buff, SIZE, 0, (struct sockaddr *)&c_addr, &c_len);
+        if (cli_socket >= 0)
+        {
+            printf("Request received from %s, port %d\n",
+            inet_ntoa(c_addr.sin_addr),ntohs(c_addr.sin_port));
+        }
+        else
+        {
+            cerr << "ERR on recv\n";
+            continue;
+        }
+        printf("Message: \"%.*s\"\n",cli_socket,buff);
+        if (strncmp(buff,"END.",4) == 0)
+        {    // "END." string exits the application
+            printf("closing socket\n");
+            close(*sock);
+        }
+        // let thread handle client
+        thread t (handle_request, cli_socket);
+        t.detach();
     }
     return EXIT_SUCCESS;
 }
 
+int create_socket()
+{// copied from my IPK project2 and edited
+    int sockfd;
+    struct sockaddr_in server_addr;
+    // First call socket() function
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0)
+    {
+        return -1;
+    }
+    // Initialize socket structure
+    bzero((char *) &server_addr, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+    // Binding socket
+    if (bind(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0)
+    {
+        return -1;
+    }
+    // Returning binded socket
+    return sockfd;
+}
+
+
 void sig_handler(int signal)
 {
-    cout << "\nInterrupt signal (" << signal << ") received.\n";
-    exit(signal);
+    cout << "\nInterrupt signal (" << signal << ") received...\n";
+    if (sock != -1 )
+    {
+        cout << "Closing socket...\n";
+        close(sock);
+    }
+    exit(EXIT_SUCCESS);
 }
 
 u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip)
