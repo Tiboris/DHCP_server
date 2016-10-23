@@ -48,6 +48,7 @@ typedef struct struct_dhcp_packet
 *   Main
 */
 u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip);
+bool item_in_list(u_int32_t item, vector<u_int32_t> list);
 void sig_handler(int signal);
 
 int main(int argc, char** argv)
@@ -112,16 +113,21 @@ u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip)
     {   // when free address is broadcast we are out of addresses in scope
         return UINT32_MAX;
     }
-    else if (find(scope->exclude_list.begin(), scope->exclude_list.end(), offered_ip) != scope->exclude_list.end())
-    {// when address is already in use or in exclude_list we skip and try again
+    else if (item_in_list(offered_ip, scope->exclude_list))
+    {   // when address is already in use or in exclude_list we try again other
         offered_ip = htonl(offered_ip);
         offered_ip++; // next address might be usable
         offered_ip = htonl(offered_ip);
         return get_ip_addr(scope, offered_ip);
     }
     else
-    {// return first usable address and then add it to exclude_list
+    {   // return first usable address and then add it to exclude_list
         scope->exclude_list.insert(scope->exclude_list.end(), offered_ip);
         return offered_ip;
     }
+}
+
+bool item_in_list( u_int32_t item, vector<u_int32_t> list)
+{// returns true when item in list
+    return (find(list.begin(), list.end(), item) != list.end());
 }
