@@ -1,22 +1,37 @@
 
 #include <csignal>
+
 #include <iostream>
+
 #include <fstream>
+
 #include <string>
+
+#include <string.h>
+
+#include <strings.h>
+
 #include <regex>
+
 #include <netinet/in.h>
+
 #include <unistd.h>
+
 #include <netdb.h>
+
 #include <stdio.h>
+
 #include <stdlib.h>
+
 #include <arpa/inet.h>
+
 #include <algorithm>
-#include <netinet/in.h>
+
 #include <thread>
 
 #include "argparser.cpp"
 
-#define PORT 1167
+#define PORT 67
 #define MAX_OCTET_CNT 4
 #define MAX_OCTET_NUM 255
 
@@ -144,8 +159,8 @@ bool begin_listen(scope_settings scope, int* sock)
             close(*sock);
         }
         // let thread handle client
-        thread t (handle_request, cli_socket);
-        t.detach();
+        //thread t (handle_request, cli_socket);
+        //t.detach();
     }
     return EXIT_SUCCESS;
 }
