@@ -27,8 +27,6 @@
 
 #include <algorithm>
 
-#include <thread>
-
 #include "argparser.cpp"
 
 #define PORT 67
@@ -36,14 +34,14 @@
 #define MAX_OCTET_NUM 255
 
 using namespace std;
-#define SIZE 9
-#define MAX_CLIENTS 8
+#define PCKT_SIZE 1024
 #define MAX_DHCP_CHADDR_LENGTH           16
 #define MAX_DHCP_SNAME_LENGTH            64
 #define MAX_DHCP_FILE_LENGTH             128
 #define MAX_DHCP_OPTIONS_LENGTH          312
 
-int sock = -1; // socket has to be closed after SIGINT;
+int srv_socket = -1; // socket has to be closed after SIGINT;
+int cli_socket = -1; // socket for client
 
 typedef struct struct_dhcp_packet
 {
@@ -68,9 +66,9 @@ u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip);
 bool item_in_list(u_int32_t item, vector<u_int32_t> list);
 void sig_handler(int signal);
 bool listen(scope_settings scope);
-int create_socket();bool
-begin_listen(scope_settings scope, int* sock);
-void handle_request(int cli_socket);
+int create_socket();
+bool handle_request(scope_settings scope, int* s, int* cs);
+
 /*
 *   Main
 */
@@ -117,32 +115,24 @@ int main(int argc, char** argv)
         }
     }
     printf("\nBEGIN LISTEN:\n\n");
-    return begin_listen(scope, &sock);
+    return handle_request(scope, &srv_socket, &cli_socket);
 }
 
-void handle_request(int cli_socket)
+bool handle_request(scope_settings scope, int* s, int* cs )
 {
-    exit(0);
-}
-
-bool begin_listen(scope_settings scope, int* sock)
-{
-    *sock = create_socket();
-    if (*sock == -1)
+    if ((*s = create_socket()) == -1)
     {
         cerr<< "ERR creating socket\n";
         return EXIT_FAILURE;
     }
     struct sockaddr_in c_addr;
-    // Start listening to clients max 10 9 in queue on socket s
-    listen(*sock,MAX_CLIENTS);
     socklen_t c_len = sizeof(c_addr);
-    char buff[SIZE];
+    u_int8_t pckt[PCKT_SIZE];
     // handling server run
     while (true)
     {
-        int cli_socket = recvfrom(*sock, buff, SIZE, 0, (struct sockaddr *)&c_addr, &c_len);
-        if (cli_socket >= 0)
+        *cs = recvfrom(*s, pckt, PCKT_SIZE, 0, (struct sockaddr*)&c_addr, &c_len);
+        if (*cs >= 0)
         {
             printf("Request received from %s, port %d\n",
             inet_ntoa(c_addr.sin_addr),ntohs(c_addr.sin_port));
@@ -152,15 +142,10 @@ bool begin_listen(scope_settings scope, int* sock)
             cerr << "ERR on recv\n";
             continue;
         }
-        printf("Message: \"%.*s\"\n",cli_socket,buff);
-        if (strncmp(buff,"END.",4) == 0)
-        {    // "END." string exits the application
-            printf("closing socket\n");
-            close(*sock);
+        for (int i = 0; i < *cs; i++)
+        {
+            printf("%d: %u\n",i,pckt[i] );
         }
-        // let thread handle client
-        //thread t (handle_request, cli_socket);
-        //t.detach();
     }
     return EXIT_SUCCESS;
 }
@@ -193,10 +178,15 @@ int create_socket()
 void sig_handler(int signal)
 {
     cout << "\nInterrupt signal (" << signal << ") received...\n";
-    if (sock != -1 )
+    if (cli_socket != -1 )
     {
-        cout << "Closing socket...\n";
-        close(sock);
+        cout << "Closing client socket...\n";
+        close(cli_socket);
+    }
+    if (srv_socket != -1)
+    {
+        cout << "Closing server socket...\n";
+        close(srv_socket);
     }
     exit(EXIT_SUCCESS);
 }
