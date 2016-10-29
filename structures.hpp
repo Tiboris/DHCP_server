@@ -35,9 +35,9 @@ typedef struct struct_dhcp_packet
     u_int32_t siaddr;               /* IP address of this DHCP server */
     u_int32_t giaddr;               /* IP address of DHCP relay */
     u_int8_t chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
-    int8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
-    int8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
-	int8_t options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
+    u_int8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
+    u_int8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
+	u_int8_t options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
 } __attribute__((__packed__)) dhcp_packet;
 
 #endif

@@ -8,7 +8,6 @@
 using namespace std;
 
 int srv_socket = -1; // socket has to be closed after SIGINT;
-int cli_socket = -1; // socket for client
 
 void sig_handler(int signal);
 
@@ -24,51 +23,12 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    struct in_addr ip_addr;
-    ip_addr.s_addr = scope.network_addr ;
-    printf("The NW is %s\n", inet_ntoa(ip_addr));
-    ip_addr.s_addr = scope.dhcp_srv_addr ;
-    printf("The IP is %s\n", inet_ntoa(ip_addr));
-    ip_addr.s_addr = scope.mask ;
-    printf("The MS is %s\n", inet_ntoa(ip_addr));
-    if (scope.exclude_list.begin()!=scope.exclude_list.end())
-    {
-        cout<< "IP EXCLUDE LIST:\n";
-        for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
-        {
-            ip_addr.s_addr = *item;
-            printf("\t%s\n", inet_ntoa(ip_addr));
-        }
-    }
-    ip_addr.s_addr = scope.first_addr ;
-    printf("The FR is %s\n", inet_ntoa(ip_addr));
-    ip_addr.s_addr = scope.broadcast ;
-    printf("The BR is %s\n", inet_ntoa(ip_addr));
-
-    ip_addr.s_addr = get_ip_addr(&scope, scope.first_addr);
-    printf("Offers: %s\n", inet_ntoa(ip_addr));
-
-    if (scope.exclude_list.begin()!=scope.exclude_list.end())
-    {
-        cout<< "IP EXCLUDE LIST:\n";
-        for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
-        {
-            ip_addr.s_addr = *item;
-            printf("\t%s\n", inet_ntoa(ip_addr));
-        }
-    }
-    printf("\nBEGIN LISTEN:\n\n");
-    return handle_request(&scope, &srv_socket, &cli_socket);
+    return handle_request(&scope, &srv_socket);
 }
 
 void sig_handler(int signal)
 {
     cout << "\nInterrupt signal (" << signal << ") received...\n";
-    if (cli_socket != -1 )
-    {
-        cout << "Closing client socket...\n";
-        close(cli_socket);
-    }
     if (srv_socket != -1)
     {
         cout << "Closing server socket...\n";
@@ -76,3 +36,41 @@ void sig_handler(int signal)
     }
     exit(EXIT_SUCCESS);
 }
+
+
+
+// // into main to print info
+// struct in_addr ip_addr;
+// ip_addr.s_addr = scope.network_addr ;
+// printf("The NW is %s\n", inet_ntoa(ip_addr));
+// ip_addr.s_addr = scope.dhcp_srv_addr ;
+// printf("The IP is %s\n", inet_ntoa(ip_addr));
+// ip_addr.s_addr = scope.mask ;
+// printf("The MS is %s\n", inet_ntoa(ip_addr));
+// if (scope.exclude_list.begin()!=scope.exclude_list.end())
+// {
+//     cout<< "IP EXCLUDE LIST:\n";
+//     for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
+//     {
+//         ip_addr.s_addr = *item;
+//         printf("\t%s\n", inet_ntoa(ip_addr));
+//     }
+// }
+// ip_addr.s_addr = scope.first_addr ;
+// printf("The FR is %s\n", inet_ntoa(ip_addr));
+// ip_addr.s_addr = scope.broadcast ;
+// printf("The BR is %s\n", inet_ntoa(ip_addr));
+//
+// ip_addr.s_addr = get_ip_addr(&scope, scope.first_addr);
+// printf("Offers: %s\n", inet_ntoa(ip_addr));
+//
+// if (scope.exclude_list.begin()!=scope.exclude_list.end())
+// {
+//     cout<< "IP EXCLUDE LIST:\n";
+//     for (auto item=scope.exclude_list.begin(); item<scope.exclude_list.end(); item++)
+//     {
+//         ip_addr.s_addr = *item;
+//         printf("\t%s\n", inet_ntoa(ip_addr));
+//     }
+// }
+// printf("\nBEGIN LISTEN:\n\n");
