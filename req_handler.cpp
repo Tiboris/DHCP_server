@@ -36,8 +36,8 @@ bool handle_request(scope_settings* scope, int* s)
         if (true)
         {
             br_addr.sin_family = AF_INET;                     // set IPv4 addressing
-            br_addr.sin_addr.s_addr = scope->broadcast;       // the server listens to any interface
-            br_addr.sin_port = htons(PORT);                   // the server listens on this port
+            br_addr.sin_addr.s_addr = scope->broadcast;       // broadcast addrs
+            br_addr.sin_port = htons(PORT+1);                 // the client listens on this port
             int on = 1;
             if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
                 return EXIT_FAILURE;
@@ -132,16 +132,15 @@ bool err_set_offer(scope_settings* scope, dhcp_packet* p)
     p->options[16]=0;
     p->options[17]=0;
     p->options[18]=120;
+    p->options[19]=54;
+    p->options[20]=4;
+    memcpy(&p->options[21], &scope->dhcp_srv_addr, 32);
 
 
 
-    int last=19;
+    int last=25;
     p->options[last]=255;
 
-    for (size_t i = last+1; i < MAX_DHCP_OPTIONS_LENGTH; i++)
-    {
-        p->options[i]=0;
-    }
 
 
 
