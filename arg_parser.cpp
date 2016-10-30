@@ -17,7 +17,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         }
         char result[INET_ADDRSTRLEN];
         cut(optarg_val, 0, pos, result);
-        if ((scope->network_addr = strtoip(result)) == UINT32_MAX)
+        if ((scope->net_addr = strtoip(result)) == UINT32_MAX)
         {
             cerr << ERR_IP_FORMAT << optarg_val << endl;
             return EXIT_FAILURE;
@@ -31,12 +31,17 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         }                                                       // 10.0.0.0
         scope->mask = scope->mask >> cmask;                     // 0.0.255.255
         scope->mask = htonl(scope->mask);                       // indian
-        scope->broadcast = scope->network_addr + scope->mask;   // 10.0.255.255
+        scope->broadcast = scope->net_addr + scope->mask;   // 10.0.255.255
         scope->mask = ~ scope->mask;                            // 255.255.0.0
-        scope->dhcp_srv_addr = htonl(scope->network_addr);      // indian
-        scope->dhcp_srv_addr++;                                 // 10.0.0.1
-        scope->first_addr = htonl(scope->dhcp_srv_addr + 1);    // 10.0.0.2
-        scope->dhcp_srv_addr = htonl(scope->dhcp_srv_addr);     // indian
+        if (! (scope->mask & scope->net_addr)) // TODO check network validity
+        {
+            cerr << result << " can NOT have mask '/" << cmask << endl;
+            return EXIT_FAILURE;
+        }
+        scope->srv_addr = htonl(scope->net_addr);      // indian
+        scope->srv_addr++;                                 // 10.0.0.1
+        scope->first_addr = htonl(scope->srv_addr + 1);    // 10.0.0.2
+        scope->srv_addr = htonl(scope->srv_addr);     // indian
     }
     else if (option == 'e')
     {

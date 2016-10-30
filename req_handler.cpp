@@ -24,14 +24,18 @@ bool handle_request(scope_settings* scope, int* s)
             cerr << "ERR on recv\n";
             continue;
         }
-        u_int8_t client_chaddr [MAX_DHCP_CHADDR_LENGTH];
-        memcpy(client_chaddr, p.chaddr, MAX_DHCP_CHADDR_LENGTH);
-        cout<<client_chaddr[0]<<endl;
-        if (err_set_offer(scope, &p))
+
+        for (size_t i = 0; i < 6; i++)
         {
-            cerr << "ERR on send\n";
-            continue;
+            char c='\0';
+            (i == 6-1) ? c='\n' : c=':';
+            cout << hex << +p.chaddr[i] << c << dec;
         }
+
+        u_int32_t offered_ip = get_ip_addr(scope, scope->first_addr);
+
+        set_resp(scope, &p, offered_ip, DHCPOFFER);
+
         struct sockaddr_in br_addr;
         if (true)
         {
@@ -59,92 +63,67 @@ bool handle_request(scope_settings* scope, int* s)
     }
     return EXIT_SUCCESS;
 }
-// typedef struct struct_dhcp_packet
-// {
-//     u_int8_t  op;                   /* packet type */
-//     u_int8_t  htype;                /* type of hardware address for client machine */
-//     u_int8_t  hlen;                 /* length of client hardware address */
-//     u_int8_t  hops;                 /* hops */
-//     u_int32_t xid;                  /* random transaction id number - chosen by client */
-//     u_int16_t secs;                 /* seconds used in timing */
-//     u_int16_t flags;                /* flags */
-//     u_int32_t ciaddr;               /* IP address of client machine (if client already have one) */
-//     u_int32_t yiaddr;               /* IP address of client machine (offered by this the DHCP server) */
-//     u_int32_t siaddr;               /* IP address of this DHCP server */
-//     u_int32_t giaddr;               /* IP address of DHCP relay */
-//     u_int8_t chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
-//     int8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
-//     int8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
-// 	int8_t options [MAX_DHCP_OPTIONS_LENGTH];       /* options */
-// } __attribute__((__packed__)) dhcp_packet;
 
-
-//  OPT Code   Len   Option Codes
-//   +-----+-----+-----+-----+---
-//   |  55 |  n  |  c1 |  c2 | ...
-//   +-----+-----+-----+-----+---
-
-
-bool err_set_offer(scope_settings* scope, dhcp_packet* p)
+void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
 {
-
     p->op = BOOTREPLY;
     p->hops = ZERO;
     p->secs = ZERO;
     p->ciaddr = ZERO;
-    p->yiaddr = get_ip_addr(scope, scope->first_addr);
-    p->siaddr = scope->dhcp_srv_addr;
-    memset(&p->sname, 0, MAX_DHCP_SNAME_LENGTH);
+    p->yiaddr = offr_ip;
+    p->siaddr = scope->srv_addr;
+    memset(&p->sname, ZERO, MAX_DHCP_SNAME_LENGTH);
 
-    //memcpy(&p->options[0], cookie, 32);
+    size_t pos = ZERO;
 
-
-    // This option is used to convey the type of the DHCP message.  The code
-    //    for this option is 53, and its length is 1.  Legal values for this
-    //    option are:
-    //
-    //            Value   Message Type
-    //            -----   ------------
-    //              1     DHCPDISCOVER
-    //              2     DHCPOFFER
-    //              3     DHCPREQUEST
-    //              4     DHCPDECLINE
-    //              5     DHCPACK
-    //              6     DHCPNAK
-    //              7     DHCPRELEASE
-    //
-    //     Code   Len  Type
-    //    +-----+-----+-----+
-    //    |  53 |  1  | 1-7 |
-    //    +-----+-----+-----+
-    // message type(53) offer (2)
-    p->options[4]=53;
-    p->options[5]=1;
-    p->options[6]=2;
-    // mask(1) size(4*8)
-    p->options[7]=1;
-    p->options[8]=4;
-    memcpy(&p->options[9], &scope->mask, 32);
-    p->options[13]=51;
-
-    p->options[14]=4;
-    p->options[15]=0;
-    p->options[16]=0;
-    p->options[17]=0;
-    p->options[18]=120;
-    p->options[19]=54;
-    p->options[20]=4;
-    memcpy(&p->options[21], &scope->dhcp_srv_addr, 32);
+    response r;
+    r.msg_type = t;
 
 
-
-    int last=25;
-    p->options[last]=255;
-
+    memcpy(&p->options[pos], &r.magic_cookie, sizeof(r.magic_cookie));
+    pos += sizeof(r.magic_cookie);
 
 
+    memcpy(&p->options[pos], &r.msg_type_opt, sizeof(r.msg_type_opt));
+    pos += sizeof(r.msg_type_opt);
 
-    return EXIT_SUCCESS;
+
+    memcpy(&p->options[pos], &r.msg_type, sizeof(r.msg_type));
+    pos += sizeof(r.msg_type);
+
+
+    memcpy(&p->options[pos], &r.mask_type, sizeof(r.mask_type));
+    pos += sizeof(r.mask_type);
+
+
+    memcpy(&p->options[pos], &scope->mask, sizeof(scope->mask));
+    pos += sizeof(&scope->mask);
+
+
+    memcpy(&p->options[pos], &r.lease_time_opt, sizeof(r.lease_time_opt));
+    pos += sizeof(r.lease_time_opt);
+
+
+    memcpy(&p->options[pos], &r.lease_time, sizeof(r.lease_time));
+    pos += sizeof(r.lease_time);
+
+
+    memcpy(&p->options[pos], &r.srv_identif, sizeof(r.srv_identif));
+    pos += sizeof(r.srv_identif);
+
+
+    memcpy(&p->options[pos], &scope->srv_addr, sizeof(scope->srv_addr));
+    pos += sizeof(&scope->srv_addr);
+
+
+    p->options[pos]=255;
+    cout<<"packet:\t";
+    for (size_t i = 0; i <= pos; i++)
+    {
+        printf("%u|", p->options[i] );
+    }
+    cout<<endl;
+    return;
 }
 
 int create_socket()

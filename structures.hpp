@@ -13,8 +13,8 @@ using namespace std;
 
 typedef struct scope_settings_struct
 {
-    u_int32_t network_addr;
-    u_int32_t dhcp_srv_addr;
+    u_int32_t net_addr;
+    u_int32_t srv_addr;
     u_int32_t mask = UINT32_MAX;
     vector<u_int32_t> exclude_list;
     u_int32_t first_addr;
@@ -38,6 +38,6 @@ typedef struct struct_dhcp_packet
     u_int8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
     u_int8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
 	u_int8_t options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
-} __attribute__((__packed__)) dhcp_packet;
+} __attribute__ ((packed)) dhcp_packet;
 
 #endif
