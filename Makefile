@@ -1,10 +1,16 @@
-CXX=g++
-CXXFLAGS=-O2 -g -Wall -Wextra -pedantic -std=c++11 -pthread
-LDFLAGS=-Wl,-rpath=/usr/local/lib/gcc49/
+CXX = g++
+CXXFLAGS = -O3 -g -Wall -Wextra -pedantic -std=c++11
 
 default: dserver
 
-dserver: dserver.cpp
+dserver: dserver.o req_handler.o arg_parser.o
+	$(CXX) dserver.o req_handler.o arg_parser.o
+
+dserver.o: dserver.cpp
+
+req_handler.o: req_handler.cpp
+
+arg_parser.o: arg_parser.cpp
 
 clean:
-	rm -f dserver
+	rm -f dserver *.o

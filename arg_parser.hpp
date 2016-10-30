@@ -1,6 +1,8 @@
 #ifndef ARG_PARSER_HPP
 #define ARG_PARSER_HPP
 
+#include <iostream>
+#include <cstdio>
 #include <string>
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,9 +27,9 @@ bool opt_err(int argc, char** argv, scope_settings* args);
 // checks option arguments validity
 bool arg_err(char option, string optarg_val, scope_settings* args);
 // converts string to unsigned int
-u_int32_t mystrtoui(string optarg_val);
+uint32_t mystrtoui(string optarg_val);
 // converts char* to unsigned int format address used in ip_addr struct
-u_int32_t strtoip(const char* ip_in);
+uint32_t strtoip(const char* ip_in);
 // cuts char* string
 void cut(char* src, size_t from, size_t to, char* dst);
 

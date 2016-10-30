@@ -32,7 +32,7 @@ bool handle_request(scope_settings* scope, int* s)
             cout << hex << +p.chaddr[i] << c << dec;
         }
 
-        u_int32_t offered_ip = get_ip_addr(scope, scope->first_addr);
+        uint32_t offered_ip = get_ip_addr(scope, scope->first_addr);
 
         set_resp(scope, &p, offered_ip, DHCPOFFER);
 
@@ -45,8 +45,6 @@ bool handle_request(scope_settings* scope, int* s)
             int on = 1;
             if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
                 return EXIT_FAILURE;
-            else
-                printf("OK BR is set\n");
         }
         r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, c_len);
         printf("%u\n",p.op );
@@ -151,9 +149,9 @@ int create_socket()
     return sockfd;
 }
 
-u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip)
+uint32_t get_ip_addr(scope_settings* scope, uint32_t ip)
 {// returns first free address from scope
-    u_int32_t offered_ip = ip;
+    uint32_t offered_ip = ip;
     if (ip == scope->broadcast)
     {   // when free address is broadcast we are out of addresses in scope
         return UINT32_MAX;
@@ -172,7 +170,7 @@ u_int32_t get_ip_addr(scope_settings* scope, u_int32_t ip)
     }
 }
 
-bool item_in_list( u_int32_t item, vector<u_int32_t> list)
+bool item_in_list( uint32_t item, vector<uint32_t> list)
 {// returns true when item in list
     return (find(list.begin(), list.end(), item) != list.end());
 }

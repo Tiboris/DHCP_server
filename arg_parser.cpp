@@ -46,7 +46,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
     else if (option == 'e')
     {
         string delimiter = ",";
-        u_int32_t exclude;
+        uint32_t exclude;
         size_t start_pos = 0;
         char result[INET_ADDRSTRLEN];                       // allocs memory
         string tmp = static_cast<string>(optarg_val);
@@ -85,8 +85,8 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
         cerr << ERR_NO_ARGS << USAGE;
         return EXIT_FAILURE;
     }
-    u_int32_t pflag = 0;
-    u_int32_t eflag = 0;
+    uint32_t pflag = 0;
+    uint32_t eflag = 0;
     int max_argc_val = 1;
     int c;
     while ((c = getopt (argc, argv, "p:e:")) != -1)
@@ -150,7 +150,7 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
     return EXIT_SUCCESS;
 }
 
-u_int32_t mystrtoui(string optarg_val)
+uint32_t mystrtoui(string optarg_val)
 {
     if (optarg_val == "")
     {
@@ -166,7 +166,7 @@ u_int32_t mystrtoui(string optarg_val)
     return stoul(optarg_val,nullptr,10);
 }
 
-u_int32_t strtoip(const char* ip_in)
+uint32_t strtoip(const char* ip_in)
 {
     struct in_addr ip_addr;
     return (inet_aton(ip_in, &ip_addr) == 0) ? UINT32_MAX : ip_addr.s_addr;

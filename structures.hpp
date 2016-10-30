@@ -23,21 +23,21 @@ typedef struct scope_settings_struct
 
 typedef struct struct_dhcp_packet
 {
-    u_int8_t  op;                   /* packet type */
-    u_int8_t  htype;                /* type of hardware address for client machine */
-    u_int8_t  hlen;                 /* length of client hardware address */
-    u_int8_t  hops;                 /* hops */
-    u_int32_t xid;                  /* random transaction id number - chosen by client */
-    u_int16_t secs;                 /* seconds used in timing */
-    u_int16_t flags;                /* flags */
-    u_int32_t ciaddr;               /* IP address of client machine (if client already have one) */
-    u_int32_t yiaddr;               /* IP address of client machine (offered by this the DHCP server) */
-    u_int32_t siaddr;               /* IP address of this DHCP server */
-    u_int32_t giaddr;               /* IP address of DHCP relay */
-    u_int8_t chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
-    u_int8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
-    u_int8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
-	u_int8_t options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
+    uint8_t  op;                   /* packet type */
+    uint8_t  htype;                /* type of hardware address for client machine */
+    uint8_t  hlen;                 /* length of client hardware address */
+    uint8_t  hops;                 /* hops */
+    uint32_t xid;                  /* random transaction id number - chosen by client */
+    uint16_t secs;                 /* seconds used in timing */
+    uint16_t flags;                /* flags */
+    uint32_t ciaddr;               /* IP address of client machine (if client already have one) */
+    uint32_t yiaddr;               /* IP address of client machine (offered by this the DHCP server) */
+    uint32_t siaddr;               /* IP address of this DHCP server */
+    uint32_t giaddr;               /* IP address of DHCP relay */
+    uint8_t chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
+    uint8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
+    uint8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
+	uint8_t options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
 } __attribute__ ((packed)) dhcp_packet;
 
 #endif

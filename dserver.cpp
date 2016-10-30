@@ -2,8 +2,8 @@
 #include <iostream>
 
 #include "structures.hpp"
-#include "arg_parser.cpp"
-#include "req_handler.cpp"
+#include "arg_parser.hpp"
+#include "req_handler.hpp"
 
 using namespace std;
 
