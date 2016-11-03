@@ -29,5 +29,5 @@
 *.app
 dserver
 dhcp.c
-rfc2131.pdf
+*.pdf
 *.txt

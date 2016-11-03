@@ -13,12 +13,12 @@ using namespace std;
 
 typedef struct scope_settings_struct
 {
-    u_int32_t net_addr;
-    u_int32_t srv_addr;
-    u_int32_t mask = UINT32_MAX;
-    vector<u_int32_t> exclude_list;
-    u_int32_t first_addr;
-    u_int32_t broadcast;
+    uint32_t net_addr;
+    uint32_t srv_addr;
+    uint32_t mask = UINT32_MAX;
+    vector<uint32_t> exclude_list;
+    uint32_t first_addr;
+    uint32_t broadcast;
 }scope_settings;
 
 typedef struct struct_dhcp_packet
