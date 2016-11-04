@@ -28,7 +28,12 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         {
             cerr << "CIRD mask '/" << tmp << "' NOT supported."<< endl;
             return EXIT_FAILURE;                                // eg:
-        }                                                       // 10.0.0.0
+        }
+        if (scope->net_addr >> cmask)
+        {
+            cerr << "Argument: '" << optarg_val << ERR_NET;
+            return EXIT_FAILURE;
+        }                                            // 10.0.0.0
         scope->mask = scope->mask >> cmask;                     // 0.0.255.255
         scope->mask = htonl(scope->mask);                       // indian
         scope->broadcast = scope->net_addr + scope->mask;   // 10.0.255.255

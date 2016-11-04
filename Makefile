@@ -4,7 +4,7 @@ CXXFLAGS = -O3 -g -Wall -Wextra -pedantic -std=c++11
 default: dserver
 
 dserver: dserver.o req_handler.o arg_parser.o
-	$(CXX) dserver.o req_handler.o arg_parser.o
+	$(CXX) dserver.o req_handler.o arg_parser.o -o dserver
 
 dserver.o: dserver.cpp
 

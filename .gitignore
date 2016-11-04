@@ -24,10 +24,9 @@
 *.lib
 
 # Executables
+dserver
 *.exe
 *.out
 *.app
-dserver
-dhcp.c
 *.pdf
 *.txt

@@ -19,6 +19,7 @@
 #define ERR_ARG_2 "' argument in wrong format\n"
 #define ERR_OPT "./dserver: invalid option(s) "
 #define ERR_IP_FORMAT "Wrong IP address format: "
+#define ERR_NET "' is NOT valid network address.\n"
 
 using namespace std;
 
