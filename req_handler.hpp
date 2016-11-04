@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <cstdio>
+#include <ctime>
+#include <iomanip>      // std::setw
 #include <unistd.h>
 #include <cstdint>
 #include <string.h>
@@ -18,14 +20,16 @@
 #define DHCPACK 5
 #define DHCPNAK 6
 
-#define MASK_T  1025        // 1 4
-#define MSG_T   309         // 53 1
-#define LEASE_T 1075        // 51 4
-#define SRV_I   1078        // 54 4
-#define COOKIE  1666417251  // MAGIC COOKIE 99 130 83 99
+#define MIN_DHCP_PCK_LEN 300    // minimal length of DHCP packet
+#define MASK_T  1025            // 1 4
+#define MSG_T   309             // 53 1
+#define LEASE_T 1075            // 51 4
+#define SRV_ID   1078           // 54 4
+#define COOKIE  1666417251      // MAGIC COOKIE 99 130 83 99
 
-#define HOUR 2160
-#define MINUTE 15360
+#define HOUR 3600               // hour in seconds
+#define P_HOUR 2160             // hour in reverse endien
+#define MINUTE 15360            // minute in reverse endien
 
 #define ZERO 0
 
@@ -35,23 +39,25 @@ typedef struct response_struct
     uint16_t msg_type_opt = MSG_T;
     uint8_t  msg_type = DHCPOFFER;
     uint16_t lease_time_opt = LEASE_T;
-    uint32_t lease_time = HOUR;
+    uint32_t lease_time = P_HOUR;
     uint16_t mask_type = MASK_T;
-    uint16_t srv_identif = SRV_I;
+    uint16_t srv_identif = SRV_ID;
 }response;
 
 using namespace std;
-
-uint32_t get_ip_addr(scope_settings* scope, uint32_t ip);
-
-bool item_in_list(uint32_t item, vector<uint32_t> list);
-
-void set_resp(scope_settings* scope, dhcp_packet* p, uint32_t offr_ip, int t);
 
 int create_socket();
 
 bool handle_request(scope_settings* scope, int* s);
 
+bool item_in_list(uint32_t item, vector<uint32_t> list);
+
+void return_ip_addr(scope_settings* scope, uint32_t ip);
+
+uint32_t get_ip_addr(scope_settings* scope, uint32_t ip);
+
 dhcp_packet save_request(scope_settings* scope, uint8_t* packet);
+
+void set_resp(scope_settings* scope, dhcp_packet* p, uint32_t offr_ip, int t);
 
 #endif

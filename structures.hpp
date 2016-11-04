@@ -13,13 +13,21 @@ using namespace std;
 
 typedef struct scope_settings_struct
 {
-    uint32_t net_addr;
-    uint32_t srv_addr;
-    uint32_t mask = UINT32_MAX;
-    vector<uint32_t> exclude_list;
-    uint32_t first_addr;
-    uint32_t broadcast;
+    uint32_t net_addr;              /* network address */
+    uint32_t srv_addr;              /* first address of network */
+    uint32_t mask = UINT32_MAX;     /* network mask */
+    vector<uint32_t> exclude_list;  /* excluded ip addresses */
+    uint32_t first_addr;            /* first available address */
+    uint32_t broadcast;             /* broadcast address */
 }scope_settings;
+
+typedef struct record_struct
+{
+    uint32_t host_ip;                           /* IP addr */
+    uint8_t  chaddr [MAX_DHCP_CHADDR_LENGTH];   /* MAC addr */
+    uint32_t reserv_start;                      /* start type */
+    uint32_t reserv_end;                        /* ending time */
+} __attribute__ ((packed)) record;
 
 typedef struct struct_dhcp_packet
 {
@@ -35,9 +43,9 @@ typedef struct struct_dhcp_packet
     uint32_t siaddr;               /* IP address of this DHCP server */
     uint32_t giaddr;               /* IP address of DHCP relay */
     uint8_t chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
-    uint8_t sname [MAX_DHCP_SNAME_LENGTH];        /* name of DHCP server */
-    uint8_t file [MAX_DHCP_FILE_LENGTH];          /* boot file name (used for diskless booting?) */
-	uint8_t options [MAX_DHCP_OPTIONS_LENGTH];    /* options */
+    uint8_t sname [MAX_DHCP_SNAME_LENGTH];      /* name of DHCP server */
+    uint8_t file [MAX_DHCP_FILE_LENGTH];        /* boot file name (used for diskless booting?) */
+    uint8_t options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
 } __attribute__ ((packed)) dhcp_packet;
 
 #endif

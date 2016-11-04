@@ -23,8 +23,23 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             return EXIT_FAILURE;
         }
         tmp.erase(0, pos + delimiter.length());
-        int cmask = mystrtoui(tmp); // > MAX_OCTET_NUM
-        if ((cmask == 0) || (cmask > 30 ))
+        uint32_t cmask = 0;
+        try
+        {
+            for (auto i = tmp.begin(); i != tmp.end(); i++)
+            {
+                if (!isdigit(*i))
+                {
+                    throw EXIT_FAILURE;
+                }
+            }
+            cmask = stoul(tmp,nullptr,10);
+            if ((cmask == 0) || (cmask > 30 ))
+            {
+                throw EXIT_FAILURE;
+            }
+        }
+        catch (...)
         {
             cerr << "CIRD mask '/" << tmp << "' NOT supported."<< endl;
             return EXIT_FAILURE;                                // eg:
@@ -153,22 +168,6 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
-}
-
-uint32_t mystrtoui(string optarg_val)
-{
-    if (optarg_val == "")
-    {
-        return MAX_OCTET_NUM;
-    }
-    for (auto i = optarg_val.begin(); i != optarg_val.end(); i++)
-    {
-        if (!isdigit(*i))
-        {
-            return MAX_OCTET_NUM;
-        }
-    }
-    return stoul(optarg_val,nullptr,10);
 }
 
 uint32_t strtoip(const char* ip_in)

@@ -19,29 +19,37 @@ bool handle_request(scope_settings* scope, int* s)
         int r;
         dhcp_packet p;
         r = recvfrom(*s, &p, sizeof(p), 0, (struct sockaddr*)&c_addr, &c_len);
-        if (r < 0)
+        if (r < MIN_DHCP_PCK_LEN)
         {
             cerr << "ERR on recv\n";
             continue;
         }
-
+        // TODO rozhodnut co z packetom
+        // if (/* condition */)
+        // {
+        //     /* code */
+        // }
         for (size_t i = 0; i < 6; i++)
         {
             char c='\0';
             (i == 6-1) ? c='\n' : c=':';
-            cout << hex << +p.chaddr[i] << c << dec;
+            cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
         }
 
         uint32_t offered_ip = get_ip_addr(scope, scope->first_addr);
+
+        vector<record> records;
+
+        return_ip_addr(scope, offered_ip);
 
         set_resp(scope, &p, offered_ip, DHCPOFFER);
 
         struct sockaddr_in br_addr;
         if (true)
         {
-            br_addr.sin_family = AF_INET;                     // set IPv4 addressing
-            br_addr.sin_addr.s_addr = scope->broadcast;       // broadcast addrs
-            br_addr.sin_port = htons(PORT+1);                 // the client listens on this port
+            br_addr.sin_family = AF_INET;                       // set IPv4 addressing
+            br_addr.sin_addr.s_addr = UINT32_MAX;               // broadcast addrs //TODO
+            br_addr.sin_port = htons(PORT+1);                   // the client listens on this port
             int on = 1;
             if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
                 return EXIT_FAILURE;
@@ -51,8 +59,11 @@ bool handle_request(scope_settings* scope, int* s)
         if (r < 0)
         {
             cerr << "ERR on sendto\n";
+            return_ip_addr(scope, offered_ip);
             continue;
         }
+        time_t result = time(nullptr);
+        cout << asctime(localtime(&result)) << result << " seconds since the Epoch\n";
         struct in_addr ip_addr;
         ip_addr.s_addr = p.yiaddr ;
         printf("IP %s, port %d\n",
@@ -64,6 +75,7 @@ bool handle_request(scope_settings* scope, int* s)
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
 {
+    response r;
     p->op = BOOTREPLY;
     p->hops = ZERO;
     p->secs = ZERO;
@@ -71,10 +83,8 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
     p->yiaddr = offr_ip;
     p->siaddr = scope->srv_addr;
     memset(&p->sname, ZERO, MAX_DHCP_SNAME_LENGTH);
-
     size_t pos = ZERO;
 
-    response r;
     r.msg_type = t;
 
 
@@ -168,6 +178,15 @@ uint32_t get_ip_addr(scope_settings* scope, uint32_t ip)
         scope->exclude_list.insert(scope->exclude_list.end(), offered_ip);
         return offered_ip;
     }
+}
+
+void return_ip_addr(scope_settings* scope, uint32_t ip)
+{// https://en.wikipedia.org/wiki/Erase%E2%80%93remove_idiom
+    if (item_in_list(ip, scope->exclude_list))
+    {
+        scope->exclude_list.erase(remove(scope->exclude_list.begin(), scope->exclude_list.end(), ip), scope->exclude_list.end());
+    }
+    return;
 }
 
 bool item_in_list( uint32_t item, vector<uint32_t> list)
