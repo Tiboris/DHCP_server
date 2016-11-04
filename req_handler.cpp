@@ -24,53 +24,92 @@ bool handle_request(scope_settings* scope, int* s)
             cerr << "ERR on recv\n";
             continue;
         }
-        // TODO rozhodnut co z packetom
-        // if (/* condition */)
-        // {
-        //     /* code */
-        // }
-        for (size_t i = 0; i < 6; i++)
+        int message_type = get_message_type(p.options);
+        cout <<"message_type is:"<< message_type<<endl;
+
+        if (message_type == MAX_DHCP_OPTIONS_LENGTH)
         {
-            char c='\0';
-            (i == 6-1) ? c='\n' : c=':';
-            cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
+            continue;
         }
-
-        uint32_t offered_ip = get_ip_addr(scope, scope->first_addr);
-
-        vector<record> records;
-
-        return_ip_addr(scope, offered_ip);
-
-        set_resp(scope, &p, offered_ip, DHCPOFFER);
-
-        struct sockaddr_in br_addr;
-        if (true)
+        if (message_type == DHCPDISCOVER)
         {
+            for (size_t i = 0; i < 6; i++)
+            {
+                char c='\0';
+                (i == 6-1) ? c='\n' : c=':';
+                cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
+            }
+
+            uint32_t offered_ip = get_ip_addr(scope, scope->first_addr);
+
+            vector<record> records;
+
+            return_ip_addr(scope, offered_ip);
+
+            set_resp(scope, &p, offered_ip, DHCPOFFER);
+
+            struct sockaddr_in br_addr;
+
             br_addr.sin_family = AF_INET;                       // set IPv4 addressing
-            br_addr.sin_addr.s_addr = UINT32_MAX;               // broadcast addrs //TODO
+            br_addr.sin_addr.s_addr = UINT32_MAX;               // broadcast addrs
             br_addr.sin_port = htons(PORT+1);                   // the client listens on this port
             int on = 1;
             if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
                 return EXIT_FAILURE;
+
+            r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, c_len);
+            printf("%u\n",p.op );
+            if (r < 0)
+            {
+                cerr << "ERR on sendto\n";
+                return_ip_addr(scope, offered_ip);
+                continue;
+            }
+            time_t result = time(nullptr);
+            cout << asctime(localtime(&result)) << result << " seconds since the Epoch\n";
+            struct in_addr ip_addr;
+            ip_addr.s_addr = p.yiaddr ;
+            printf("IP %s, port %d\n",
+            inet_ntoa(ip_addr),ntohs(c_addr.sin_port));
         }
-        r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, c_len);
-        printf("%u\n",p.op );
-        if (r < 0)
+        if (message_type == DHCPREQUEST)
         {
-            cerr << "ERR on sendto\n";
-            return_ip_addr(scope, offered_ip);
-            continue;
+            cout << "hura zabijem sa\n";
+            return EXIT_SUCCESS;
         }
-        time_t result = time(nullptr);
-        cout << asctime(localtime(&result)) << result << " seconds since the Epoch\n";
-        struct in_addr ip_addr;
-        ip_addr.s_addr = p.yiaddr ;
-        printf("IP %s, port %d\n",
-        inet_ntoa(ip_addr),ntohs(c_addr.sin_port));
-        //return EXIT_SUCCESS;
+        if (message_type == DHCPRELEASE)
+        {
+            cout << "to co to zabijem sa\n";
+            return EXIT_SUCCESS;
+        }
     }
     return EXIT_SUCCESS;
+}
+
+int get_message_type(uint8_t* options)
+{
+    int cookie[4] = {99, 130, 83, 99};
+    for (size_t i = 0; i < 4; i++)
+    {
+        if (options[i]!=cookie[i])
+        {
+            return MAX_DHCP_OPTIONS_LENGTH;
+        }
+    }
+    int pos = 4;
+    while( pos < MAX_DHCP_OPTIONS_LENGTH - 2)
+    {
+        printf ("|%u|%u|%u|\n",options[pos],options[pos+1], options[pos+2] );
+        if (options[pos] == MSG)
+        {
+            return options[pos+2];
+        }
+        else
+        {
+            pos = pos + options[pos+1] + 2;
+        }
+    }
+    return MAX_DHCP_OPTIONS_LENGTH;
 }
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)

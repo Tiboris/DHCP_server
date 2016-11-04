@@ -14,22 +14,26 @@
 
 #include "structures.hpp"
 
-#define BOOTREPLY 2
+#define BOOTREPLY           2
 //DHCP Message Types:
-#define DHCPOFFER 2
-#define DHCPACK 5
-#define DHCPNAK 6
+#define DHCPDISCOVER        1
+#define DHCPOFFER           2
+#define DHCPREQUEST         3
+#define DHCPACK             5
+#define DHCPNAK             6
+#define DHCPRELEASE         7
 
-#define MIN_DHCP_PCK_LEN 300    // minimal length of DHCP packet
-#define MASK_T  1025            // 1 4
-#define MSG_T   309             // 53 1
-#define LEASE_T 1075            // 51 4
-#define SRV_ID   1078           // 54 4
-#define COOKIE  1666417251      // MAGIC COOKIE 99 130 83 99
+#define MSG                 53
+#define MIN_DHCP_PCK_LEN    300             // minimal length of DHCP packet
+#define MASK_T              1025            // 1 4
+#define MSG_T               309             // 53 1
+#define LEASE_T             1075            // 51 4
+#define SRV_ID              1078            // 54 4
+#define COOKIE              1666417251      // MAGIC COOKIE 99 130 83 99
 
-#define HOUR 3600               // hour in seconds
-#define P_HOUR 2160             // hour in reverse endien
-#define MINUTE 15360            // minute in reverse endien
+#define HOUR                3600            // hour in seconds
+#define P_HOUR              2160            // hour in reverse endien
+#define MINUTE              15360           // minute in reverse endien
 
 #define ZERO 0
 
@@ -47,6 +51,8 @@ typedef struct response_struct
 using namespace std;
 
 int create_socket();
+
+int get_message_type(uint8_t* options);
 
 bool handle_request(scope_settings* scope, int* s);
 

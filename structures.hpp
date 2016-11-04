@@ -6,6 +6,7 @@
 using namespace std;
 
 #define PORT                    67
+#define CLI_PORT                68
 #define MAX_DHCP_CHADDR_LENGTH  16
 #define MAX_DHCP_SNAME_LENGTH   64
 #define MAX_DHCP_FILE_LENGTH    128
