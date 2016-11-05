@@ -26,36 +26,42 @@ bool handle_request(scope_settings* scope, int* s)
             continue;
         }
         int message_type = get_message_type(p.options);
-
         if (message_type == MAX_DHCP_OPTIONS_LENGTH)
         {
             continue;
         }
-        else if (message_type == DHCPDISCOVER)
+        else if (message_type == DHCPDISCOVER || message_type == DHCPREQUEST)
         {// reply with DHCPOFFER
-            offered_ip = get_ip_addr(scope, scope->first_addr); //take first available address from scope
-            if (offered_ip == UINT32_MAX)
+            int resp_type = DHCPACK;
+            if (message_type == DHCPDISCOVER)
             {
-                continue;
+                resp_type = DHCPOFFER;
+                offered_ip = get_ip_addr(scope, scope->first_addr); //take first available address from scope
+                if (offered_ip == UINT32_MAX)
+                {
+                    continue;
+                }
+                rec.host_ip = offered_ip;
+                memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
+                rec.reserv_start = time(nullptr);
+                rec.reserv_end = rec.reserv_start + HOUR;
+                cout << ctime(&rec.reserv_start) << rec.reserv_start << " seconds since the Epoch\n";
+                cout << ctime(&rec.reserv_end) << rec.reserv_end << " +3600 seconds from the Epoch\n";
             }
-            rec.host_ip = offered_ip;
-            memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
-            rec.reserv_start = time(nullptr);
-            rec.reserv_end = rec.reserv_start + HOUR;
-
-            cout << ctime(&rec.reserv_start) << rec.reserv_start << " seconds since the Epoch\n";
-            cout << ctime(&rec.reserv_end) << rec.reserv_end << " +3600 seconds from the Epoch\n";
-            for (size_t i = 0; i < 6; i++)
+            else if (offered_ip == UINT32_MAX) // TODO REQUEST
             {
-                char c='\0';
-                (i == 6-1) ? c='\n' : c=':';
-                cout << setw(2) << setfill ('0') << hex << +rec.chaddr[i] << c << dec;
+                offered_ip = p.yiaddr = get_ip_addr(scope, scope->first_addr);
+                if (offered_ip == UINT32_MAX)
+                {
+                    continue;
+                }
+                cout << offered_ip << " <> " << p.yiaddr << endl;
             }
-            set_resp(scope, &p, offered_ip, DHCPOFFER);
+            set_resp(scope, &p, offered_ip, resp_type);
             struct sockaddr_in br_addr;
             br_addr.sin_family = AF_INET;                       // set IPv4 addressing
-            br_addr.sin_addr.s_addr = scope->broadcast;//UINT32_MAX;               // broadcast address not working
-            br_addr.sin_port = htons(CLI_PORT);                   // the client listens on this port
+            br_addr.sin_addr.s_addr = scope->broadcast;         //UINT32_MAX;               // broadcast address not working
+            br_addr.sin_port = htons(CLI_PORT);                 // the client listens on this port
             int on = 1;
             if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
             {
@@ -69,35 +75,11 @@ bool handle_request(scope_settings* scope, int* s)
                 return_ip_addr(scope, offered_ip);
                 continue;
             }
-        }
-        else if (message_type == DHCPREQUEST && offered_ip != UINT32_MAX)
-        {
-            set_resp(scope, &p, offered_ip, DHCPACK);
-            for (size_t i = 0; i < 6; i++)
+            if (message_type == DHCPACK)
             {
-                char c='\0';
-                (i == 6-1) ? c='\n' : c=':';
-                cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
+                offered_ip = UINT32_MAX;
+                records.insert(records.end(), rec);
             }
-            //return EXIT_SUCCESS;
-            struct sockaddr_in br_addr;
-            br_addr.sin_family = AF_INET;                       // set IPv4 addressing
-            br_addr.sin_addr.s_addr = scope->broadcast;//UINT32_MAX;               // broadcast address not working
-            br_addr.sin_port = htons(CLI_PORT);                   // the client listens on this port
-            int on = 1;
-            if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
-            {
-                return_ip_addr(scope, offered_ip);
-                continue;
-            }
-            r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, sizeof(br_addr));
-            if (r < 0)
-            {
-                cerr << "ERR on sendto\n";
-                return_ip_addr(scope, offered_ip);
-                continue;
-            }
-            records.insert(records.end(), rec);
         }
         else if (message_type == DHCPRELEASE && offered_ip != UINT32_MAX)
         {
@@ -122,7 +104,7 @@ int get_message_type(uint8_t* options)
     int pos = COOKIE_SIZE;
     while( pos < MAX_DHCP_OPTIONS_LENGTH - 2)
     {
-        printf ("|%u|%u|%u|\n",options[pos],options[pos+1], options[pos+2]);
+        //printf ("|%u|%u|%u|\n",options[pos],options[pos+1], options[pos+2]);
         if (options[pos] == MSG && options[pos+1] == 1)
         {
             return options[pos+2];
@@ -141,7 +123,6 @@ int get_message_type(uint8_t* options)
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
 {
-
     response r;
     p->op = BOOTREPLY;
     p->hops = ZERO;
@@ -151,48 +132,35 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
     p->siaddr = scope->srv_addr;
     memset(&p->sname, ZERO, MAX_DHCP_SNAME_LENGTH);
     size_t pos = ZERO;
-
-    r.msg_type = t;
-
-
     memcpy(&p->options[pos], &r.magic_cookie, sizeof(r.magic_cookie));
     pos += sizeof(r.magic_cookie);
-
-
+    r.msg_type = t;
     memcpy(&p->options[pos], &r.msg_type_opt, sizeof(r.msg_type_opt));
     pos += sizeof(r.msg_type_opt);
-
-
     memcpy(&p->options[pos], &r.msg_type, sizeof(r.msg_type));
     pos += sizeof(r.msg_type);
-
-
     memcpy(&p->options[pos], &r.mask_type, sizeof(r.mask_type));
     pos += sizeof(r.mask_type);
-
-
     memcpy(&p->options[pos], &scope->mask, sizeof(scope->mask));
     pos += sizeof(&scope->mask);
-
-
-    memcpy(&p->options[pos], &r.lease_time_opt, sizeof(r.lease_time_opt));
-    pos += sizeof(r.lease_time_opt);
-
-    r.lease_time = htonl(r.lease_time);
-    memcpy(&p->options[pos], &r.lease_time, sizeof(r.lease_time));
-    pos += sizeof(r.lease_time);
-
-
     memcpy(&p->options[pos], &r.srv_identif, sizeof(r.srv_identif));
     pos += sizeof(r.srv_identif);
-
-
     memcpy(&p->options[pos], &scope->srv_addr, sizeof(scope->srv_addr));
     pos += sizeof(&scope->srv_addr);
-
-
+    if (r.msg_type == DHCPNAK)
+    {
+        p->yiaddr = ZERO;
+    }
+    else
+    {
+        memcpy(&p->options[pos], &r.lease_time_opt, sizeof(r.lease_time_opt));
+        pos += sizeof(r.lease_time_opt);
+        r.lease_time = htonl(r.lease_time);
+        memcpy(&p->options[pos], &r.lease_time, sizeof(r.lease_time));
+        pos += sizeof(r.lease_time);
+    }
     p->options[pos]=255;
-    cout<<"packet:\t";
+    printf("packet type %u:\t", t);
     for (size_t i = 0; i <= pos; i++)
     {
         printf("%u|", p->options[i] );

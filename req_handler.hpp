@@ -42,7 +42,7 @@ typedef struct response_struct
     uint16_t msg_type_opt = MSG_T;
     uint8_t  msg_type = DHCPOFFER;
     uint16_t lease_time_opt = LEASE_T;
-    uint32_t lease_time = HOUR;
+    uint32_t lease_time = 60;
     uint16_t mask_type = MASK_T;
     uint16_t srv_identif = SRV_ID;
 }response;
