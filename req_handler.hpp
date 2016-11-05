@@ -55,6 +55,10 @@ int get_message_type(uint8_t* options);
 
 bool handle_request(scope_settings* scope, int* s);
 
+size_t record_position(record item, vector<record> list);
+
+void delete_record(record item, vector<record> &list);
+
 bool item_in_list(uint32_t item, vector<uint32_t> list);
 
 void return_ip_addr(scope_settings* scope, uint32_t ip);

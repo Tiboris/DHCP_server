@@ -12,9 +12,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         string delimiter = "/";
         string tmp = static_cast<string>(optarg_val);
         if ((pos =  tmp.find(delimiter)) == string::npos)
-        {
             return EXIT_FAILURE;
-        }
         char result[INET_ADDRSTRLEN];
         cut(optarg_val, 0, pos, result);                        //eg:
         if ((scope->net_addr = strtoip(result)) == UINT32_MAX)  //netw 10.0.0.0
@@ -29,15 +27,11 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             for (auto i = tmp.begin(); i != tmp.end(); i++)
             {
                 if (!isdigit(*i))
-                {
                     throw EXIT_FAILURE;
-                }
             }
             cmask = stoul(tmp,nullptr,10);
             if ((cmask == 0) || (cmask > 30 ))
-            {
                 throw EXIT_FAILURE;
-            }
         }
         catch (...)
         {
@@ -50,18 +44,13 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             return EXIT_FAILURE;
         }
         scope->mask = scope->mask >> cmask;                     // 0.0.255.255
-        scope->mask = htonl(scope->mask);                       // indian
+        scope->mask = htonl(scope->mask);                       // endian
         scope->broadcast = scope->net_addr + scope->mask;       // 10.0.255.255
         scope->mask = ~ scope->mask;                            // 255.255.0.0
-        if (! (scope->mask & scope->net_addr)) // TODO check network validity
-        {
-            cerr << result << " can NOT have mask '/" << cmask << endl;
-            return EXIT_FAILURE;
-        }
-        scope->srv_addr = htonl(scope->net_addr);      // indian
-        scope->srv_addr++;                                 // 10.0.0.1
-        scope->first_addr = htonl(scope->srv_addr + 1);    // 10.0.0.2
-        scope->srv_addr = htonl(scope->srv_addr);     // indian
+        scope->srv_addr = htonl(scope->net_addr);               // indian
+        scope->srv_addr++;                                      // 10.0.0.1
+        scope->first_addr = htonl(scope->srv_addr + 1);         // 10.0.0.2
+        scope->srv_addr = htonl(scope->srv_addr);               // indian
         scope->exclude_list.insert(scope->exclude_list.end(), scope->srv_addr);
     }
     else if (option == 'e')
@@ -69,13 +58,13 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         string delimiter = ",";
         uint32_t exclude;
         size_t start_pos = 0;
-        char result[INET_ADDRSTRLEN];                       // allocs memory
+        char result[INET_ADDRSTRLEN];                           // allocs memory
         string tmp = static_cast<string>(optarg_val);
         // to easily find delimiter in string
         while ((pos = tmp.find(delimiter)) != string::npos)
         {
-            string token = tmp.substr(0, pos);              // cuts imput
-            tmp.erase(0, pos + delimiter.length());         // erase token
+            string token = tmp.substr(0, pos);                  // cuts imput
+            tmp.erase(0, pos + delimiter.length());             // erase token
             cut(optarg_val, start_pos, pos+start_pos, result);  // cuts char*
             if ((exclude = strtoip(result)) == UINT32_MAX)
             {   // check if valid address in result of cutting
@@ -145,14 +134,10 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
                 break;
 
             case '?':
-                if (! isprint (optopt))
-                {   // if option is not printable character
+                if (! isprint (optopt)) // if option is not printable character
                     cerr << ERR_CHAR << USAGE;
-                }
                 else
-                {
                     cerr << USAGE;
-                }
 
             default:
                 return EXIT_FAILURE;

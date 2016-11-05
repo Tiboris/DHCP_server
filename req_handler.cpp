@@ -27,9 +27,7 @@ bool handle_request(scope_settings* scope, int* s)
         }
         int message_type = get_message_type(p.options);
         if (message_type == MAX_DHCP_OPTIONS_LENGTH)
-        {
             continue;
-        }
         else if (message_type == DHCPDISCOVER || message_type == DHCPREQUEST)
         {// reply with DHCPOFFER
             int resp_type = DHCPACK;
@@ -52,9 +50,7 @@ bool handle_request(scope_settings* scope, int* s)
             {
                 offered_ip = p.yiaddr = get_ip_addr(scope, scope->first_addr);
                 if (offered_ip == UINT32_MAX)
-                {
                     continue;
-                }
                 cout << offered_ip << " <> " << p.yiaddr << endl;
             }
             set_resp(scope, &p, offered_ip, resp_type);
@@ -97,32 +93,24 @@ int get_message_type(uint8_t* options)
     for (size_t i = 0; i < COOKIE_SIZE; i++)
     {
         if (options[i]!=cookie[i])
-        {
             return MAX_DHCP_OPTIONS_LENGTH;
-        }
     }
     int pos = COOKIE_SIZE;
     while( pos < MAX_DHCP_OPTIONS_LENGTH - 2)
     {
         //printf ("|%u|%u|%u|\n",options[pos],options[pos+1], options[pos+2]);
         if (options[pos] == MSG && options[pos+1] == 1)
-        {
             return options[pos+2];
-        }
         else if (options[pos] == 0)
-        {
             pos++;
-        }
         else
-        {
             pos = pos + options[pos+1] + 2;
-        }
     }
     return MAX_DHCP_OPTIONS_LENGTH;
 }
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
-{
+{// funtion for creating packet structure before sending to client
     response r;
     p->op = BOOTREPLY;
     p->hops = ZERO;
@@ -148,14 +136,14 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
     memcpy(&p->options[pos], &scope->srv_addr, sizeof(scope->srv_addr));
     pos += sizeof(&scope->srv_addr);
     if (r.msg_type == DHCPNAK)
-    {
+    {   // ACK message does not contain yiaddr record
         p->yiaddr = ZERO;
     }
     else
-    {
+    {   // ACK message does not contain lease time option too
         memcpy(&p->options[pos], &r.lease_time_opt, sizeof(r.lease_time_opt));
         pos += sizeof(r.lease_time_opt);
-        r.lease_time = htonl(r.lease_time);
+        r.lease_time = htonl(r.lease_time); // change endian
         memcpy(&p->options[pos], &r.lease_time, sizeof(r.lease_time));
         pos += sizeof(r.lease_time);
     }
@@ -176,9 +164,7 @@ int create_socket()
     // First call socket() function
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
-    {
         return -1;
-    }
     // Initialize socket structure
     //bzero((char *) &server_addr, sizeof(server_addr));
     memset(&server_addr, 0, sizeof(server_addr));
@@ -187,9 +173,7 @@ int create_socket()
     server_addr.sin_port = htons(PORT);
     // Binding socket
     if (bind(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0)
-    {
         return -1;
-    }
     // Returning binded socket
     return sockfd;
 }
@@ -215,16 +199,43 @@ uint32_t get_ip_addr(scope_settings* scope, uint32_t ip)
     }
 }
 
-void return_ip_addr(scope_settings* scope, uint32_t ip)
-{// https://en.wikipedia.org/wiki/Erase%E2%80%93remove_idiom
-    if (item_in_list(ip, scope->exclude_list))
+size_t record_position(record item, vector<record> list)
+{
+    size_t index = 0;
+    for ( auto i = list.begin(); i < list.end(); i++, index++)
     {
-        scope->exclude_list.erase(remove(scope->exclude_list.begin(), scope->exclude_list.end(), ip), scope->exclude_list.end());
+        if(item.host_ip != i->host_ip)
+            continue;
+        if (memcmp(item.chaddr, i->chaddr, MAX_DHCP_CHADDR_LENGTH) != 0)
+            continue;
+        if(item.reserv_start != i->reserv_start)
+            continue;
+        if(item.reserv_end != i->reserv_end)
+            continue;
+        else
+            break;
+    }
+    return index;
+}
+
+void delete_record(record item, vector<record> &list)
+{
+    size_t pos;
+    while ( (pos = record_position(item, list)) != list.size())
+    {
+        list.erase(list.begin() + pos);
     }
     return;
 }
 
-bool item_in_list( uint32_t item, vector<uint32_t> list)
+void return_ip_addr(scope_settings* scope, uint32_t ip)
+{// https://en.wikipedia.org/wiki/Erase%E2%80%93remove_idiom
+    if (item_in_list(ip, scope->exclude_list))
+        scope->exclude_list.erase(remove(scope->exclude_list.begin(), scope->exclude_list.end(), ip), scope->exclude_list.end());
+    return;
+}
+
+bool item_in_list(uint32_t item, vector<uint32_t> list)
 {// returns true when item in list
     return (find(list.begin(), list.end(), item) != list.end());
 }

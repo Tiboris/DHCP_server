@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     {// if there are wrong arguments program fails on startup
         return EXIT_FAILURE;
     }
-
+    // handling server run
     return handle_request(&scope, &srv_socket);
 }
 /*
@@ -35,5 +35,6 @@ void sig_handler(int signal)
         cout << "Closing server socket...\n";
         close(srv_socket);
     }
+    
     exit(EXIT_SUCCESS);
 }
