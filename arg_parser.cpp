@@ -16,8 +16,8 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
             return EXIT_FAILURE;
         }
         char result[INET_ADDRSTRLEN];
-        cut(optarg_val, 0, pos, result);
-        if ((scope->net_addr = strtoip(result)) == UINT32_MAX)
+        cut(optarg_val, 0, pos, result);                        //eg:
+        if ((scope->net_addr = strtoip(result)) == UINT32_MAX)  //netw 10.0.0.0
         {
             cerr << ERR_IP_FORMAT << optarg_val << endl;
             return EXIT_FAILURE;
@@ -42,16 +42,16 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         catch (...)
         {
             cerr << "CIRD mask '/" << tmp << "' NOT supported."<< endl;
-            return EXIT_FAILURE;                                // eg:
+            return EXIT_FAILURE;
         }
         if (scope->net_addr >> cmask)
         {
             cerr << "Argument: '" << optarg_val << ERR_NET;
             return EXIT_FAILURE;
-        }                                            // 10.0.0.0
+        }
         scope->mask = scope->mask >> cmask;                     // 0.0.255.255
         scope->mask = htonl(scope->mask);                       // indian
-        scope->broadcast = scope->net_addr + scope->mask;   // 10.0.255.255
+        scope->broadcast = scope->net_addr + scope->mask;       // 10.0.255.255
         scope->mask = ~ scope->mask;                            // 255.255.0.0
         if (! (scope->mask & scope->net_addr)) // TODO check network validity
         {
@@ -62,6 +62,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         scope->srv_addr++;                                 // 10.0.0.1
         scope->first_addr = htonl(scope->srv_addr + 1);    // 10.0.0.2
         scope->srv_addr = htonl(scope->srv_addr);     // indian
+        scope->exclude_list.insert(scope->exclude_list.end(), scope->srv_addr);
     }
     else if (option == 'e')
     {

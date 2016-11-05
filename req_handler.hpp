@@ -15,6 +15,7 @@
 #include "structures.hpp"
 
 #define BOOTREPLY           2
+#define COOKIE_SIZE         4
 //DHCP Message Types:
 #define DHCPDISCOVER        1
 #define DHCPOFFER           2
