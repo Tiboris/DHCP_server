@@ -33,8 +33,6 @@
 #define COOKIE              1666417251      // MAGIC COOKIE 99 130 83 99
 
 #define HOUR                3600            // hour in seconds
-#define P_HOUR              2160            // hour in reverse endien
-#define MINUTE              15360           // minute in reverse endien
 
 #define ZERO 0
 
@@ -44,7 +42,7 @@ typedef struct response_struct
     uint16_t msg_type_opt = MSG_T;
     uint8_t  msg_type = DHCPOFFER;
     uint16_t lease_time_opt = LEASE_T;
-    uint32_t lease_time = P_HOUR;
+    uint32_t lease_time = HOUR;
     uint16_t mask_type = MASK_T;
     uint16_t srv_identif = SRV_ID;
 }response;

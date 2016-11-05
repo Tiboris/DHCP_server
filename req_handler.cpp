@@ -63,7 +63,6 @@ bool handle_request(scope_settings* scope, int* s)
                 continue;
             }
             r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, sizeof(br_addr));
-            printf("%u\n",p.op );
             if (r < 0)
             {
                 cerr << "ERR on sendto\n";
@@ -71,22 +70,41 @@ bool handle_request(scope_settings* scope, int* s)
                 continue;
             }
         }
-        else if (message_type == DHCPREQUEST)
+        else if (message_type == DHCPREQUEST && offered_ip != UINT32_MAX)
         {
-            cout << "hura zabijem sa\n";
+            set_resp(scope, &p, offered_ip, DHCPACK);
             for (size_t i = 0; i < 6; i++)
             {
                 char c='\0';
                 (i == 6-1) ? c='\n' : c=':';
                 cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
             }
-            return EXIT_SUCCESS;
+            //return EXIT_SUCCESS;
+            struct sockaddr_in br_addr;
+            br_addr.sin_family = AF_INET;                       // set IPv4 addressing
+            br_addr.sin_addr.s_addr = scope->broadcast;//UINT32_MAX;               // broadcast address not working
+            br_addr.sin_port = htons(CLI_PORT);                   // the client listens on this port
+            int on = 1;
+            if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
+            {
+                return_ip_addr(scope, offered_ip);
+                continue;
+            }
+            r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, sizeof(br_addr));
+            if (r < 0)
+            {
+                cerr << "ERR on sendto\n";
+                return_ip_addr(scope, offered_ip);
+                continue;
+            }
+            records.insert(records.end(), rec);
         }
-        else if (message_type == DHCPRELEASE)
+        else if (message_type == DHCPRELEASE && offered_ip != UINT32_MAX)
         {
             cout << "to co to zabijem sa\n";
             return EXIT_SUCCESS;
         }
+        cout << records.size()<< " pocet zaznamov\n";
     }
     return EXIT_SUCCESS;
 }
@@ -123,6 +141,7 @@ int get_message_type(uint8_t* options)
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
 {
+
     response r;
     p->op = BOOTREPLY;
     p->hops = ZERO;
@@ -159,7 +178,7 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
     memcpy(&p->options[pos], &r.lease_time_opt, sizeof(r.lease_time_opt));
     pos += sizeof(r.lease_time_opt);
 
-
+    r.lease_time = htonl(r.lease_time);
     memcpy(&p->options[pos], &r.lease_time, sizeof(r.lease_time));
     pos += sizeof(r.lease_time);
 
