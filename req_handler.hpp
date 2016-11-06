@@ -14,6 +14,8 @@
 
 #include "structures.hpp"
 
+#define UDP_PROTO           17
+
 #define BOOTREPLY           2
 #define COOKIE_SIZE         4
 #define IP_SIZE             4

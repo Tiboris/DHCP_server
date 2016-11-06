@@ -80,17 +80,22 @@ bool handle_request(scope_settings* scope, int* s)
                 rec.reserv_start = time(nullptr);
                 rec.reserv_end = rec.reserv_start + HOUR;
             }
-            set_resp(scope, &p, offered_ip, resp_type);
             struct sockaddr_in br_addr;
             br_addr.sin_family = AF_INET;                       // set IPv4 addressing
             br_addr.sin_addr.s_addr = scope->broadcast;         //UINT32_MAX;               // broadcast address not working
             br_addr.sin_port = htons(CLI_PORT);                 // the client listens on this port
             int on = 1;
-            if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
+            if (p.ciaddr == offered_ip)
+            {
+                br_addr.sin_addr.s_addr = p.ciaddr;
+            }
+            else if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
             {
                 return_ip_addr(scope, offered_ip);
                 continue;
             }
+            //int raw_socket = socket(AF_INET, SOCK_RAW, UDP_PROTO);
+            set_resp(scope, &p, offered_ip, resp_type);
             r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, sizeof(br_addr));
             if (r < 0)
             {
