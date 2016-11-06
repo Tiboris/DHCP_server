@@ -26,8 +26,8 @@ typedef struct record_struct
 {
     uint32_t host_ip;                           /* IP addr */
     uint8_t  chaddr [MAX_DHCP_CHADDR_LENGTH];   /* MAC addr */
-    time_t reserv_start;                      /* start type */
-    time_t reserv_end;                        /* ending time */
+    time_t reserv_start;                        /* start type */
+    time_t reserv_end;                          /* ending time */
 } __attribute__ ((packed)) record;
 
 typedef struct struct_dhcp_packet

@@ -16,6 +16,8 @@
 
 #define BOOTREPLY           2
 #define COOKIE_SIZE         4
+#define IP_SIZE             4
+#define MAC_SIZE            6
 //DHCP Message Types:
 #define DHCPDISCOVER        1
 #define DHCPOFFER           2
@@ -24,6 +26,7 @@
 #define DHCPNAK             6
 #define DHCPRELEASE         7
 
+#define REQIP               50
 #define MSG                 53
 #define MIN_DHCP_PCK_LEN    300             // minimal length of DHCP packet
 #define MASK_T              1025            // 1 4
@@ -51,11 +54,9 @@ using namespace std;
 
 int create_socket();
 
-int get_message_type(uint8_t* options);
+void printrecord(record out);
 
 bool handle_request(scope_settings* scope, int* s);
-
-size_t record_position(record item, vector<record> list);
 
 void delete_record(record item, vector<record> &list);
 
@@ -65,7 +66,13 @@ void return_ip_addr(scope_settings* scope, uint32_t ip);
 
 uint32_t get_ip_addr(scope_settings* scope, uint32_t ip);
 
+bool from_scope(uint32_t desired_ip, scope_settings* scope);
+
 dhcp_packet save_request(scope_settings* scope, uint8_t* packet);
+
+size_t record_position(record item, vector<record> list, bool mac);
+
+uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type);
 
 void set_resp(scope_settings* scope, dhcp_packet* p, uint32_t offr_ip, int t);
 

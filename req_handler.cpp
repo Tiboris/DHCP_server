@@ -25,7 +25,7 @@ bool handle_request(scope_settings* scope, int* s)
             cerr << "ERR on recv\n";
             continue;
         }
-        int message_type = get_message_type(p.options);
+        int message_type = get_info(p.options, 1, MSG);
         if (message_type == MAX_DHCP_OPTIONS_LENGTH)
             continue;
         else if (message_type == DHCPDISCOVER || message_type == DHCPREQUEST)
@@ -36,22 +36,41 @@ bool handle_request(scope_settings* scope, int* s)
                 resp_type = DHCPOFFER;
                 offered_ip = get_ip_addr(scope, scope->first_addr); //take first available address from scope
                 if (offered_ip == UINT32_MAX)
+                    continue;
+            } // REQUEST potrebujem zistit ci mam zaznam pre
+            else
+            {
+                memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
+                size_t id = record_position(rec, records, true);
+                if (id != records.size()) // there is record for this mac address
                 {
+                    offered_ip = rec.host_ip = records[id].host_ip;
+                    records.erase(records.begin()+id);
+                }
+                uint32_t desired_ip = p.ciaddr;
+                cout << desired_ip << endl;
+                if (desired_ip == 0)                 // SELECTING
+                {
+                    desired_ip = get_info(p.options, 4, REQIP);
+                    if (! from_scope(desired_ip, scope))
+                        continue;
+                    rec.host_ip = offered_ip = desired_ip;
+                }
+                else if (from_scope(desired_ip, scope))              // client address is set and from scope RENEW
+                {
+                    offered_ip = desired_ip;
+                    rec.host_ip = offered_ip;
+                    cout << inet_ntoa(*(struct in_addr*)&offered_ip) <<  " <- renew \n";
+                    cout <<" pr eco\n\n"<<endl;
+                }
+                else
+                {
+                    cout <<"nema sa stat"<<endl;
                     continue;
                 }
-                rec.host_ip = offered_ip;
-                memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
                 rec.reserv_start = time(nullptr);
                 rec.reserv_end = rec.reserv_start + HOUR;
-                cout << ctime(&rec.reserv_start) << rec.reserv_start << " seconds since the Epoch\n";
-                cout << ctime(&rec.reserv_end) << rec.reserv_end << " +3600 seconds from the Epoch\n";
-            }
-            else if (offered_ip == UINT32_MAX) // TODO REQUEST
-            {
-                offered_ip = p.yiaddr = get_ip_addr(scope, scope->first_addr);
-                if (offered_ip == UINT32_MAX)
-                    continue;
-                cout << offered_ip << " <> " << p.yiaddr << endl;
+                cout << offered_ip << " <> " << p.ciaddr << endl;
             }
             set_resp(scope, &p, offered_ip, resp_type);
             struct sockaddr_in br_addr;
@@ -71,23 +90,73 @@ bool handle_request(scope_settings* scope, int* s)
                 return_ip_addr(scope, offered_ip);
                 continue;
             }
-            if (message_type == DHCPACK)
+            if (message_type != DHCPDISCOVER)
             {
                 offered_ip = UINT32_MAX;
+                printrecord(rec);
                 records.insert(records.end(), rec);
             }
         }
-        else if (message_type == DHCPRELEASE && offered_ip != UINT32_MAX)
+        else if (message_type == DHCPRELEASE)
         {
-            cout << "to co to zabijem sa\n";
-            return EXIT_SUCCESS;
+            cout << "to co toto zabijem sa !!!\n";
+            for (size_t i = 0; i < MAX_DHCP_OPTIONS_LENGTH; i++) {
+                printf("| %u |\n", p.options[i] );
+            }
+            memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
+            size_t id = record_position(rec, records, true);
+            if (id != records.size()) // there is record for this mac address
+            {
+                records.erase(records.begin()+id);
+                return_ip_addr(scope, records[id].host_ip);
+            }
+            for (auto item : records)
+            {
+                cout << "Zaznam pre : "<< inet_ntoa(*(struct in_addr*) &item.host_ip)<<endl;
+            }
         }
-        cout << records.size()<< " pocet zaznamov\n";
+        for (auto item : records)
+        {
+            cout << "Zaznam pre : "<< inet_ntoa(*(struct in_addr*) &item.host_ip)<<endl;
+        }
     }
     return EXIT_SUCCESS;
 }
 
-int get_message_type(uint8_t* options)
+void printrecord(record out)
+{
+    for (size_t i = 0; i < MAC_SIZE; i++)
+    {
+        char c='\0';
+        (i == MAC_SIZE - 1) ? c=' ' : c=':';
+        cout << setw(2) << setfill ('0') << hex << +out.chaddr[i] << c << dec;
+    }
+    //c8:0a:a9:cd:7d:81 192.168.0.101 2016-09-29_13:45 2016-09-29_15:45
+    cout << inet_ntoa(*(struct in_addr*) &out.host_ip);
+    struct tm * timeinfo;
+    timeinfo = localtime (&out.reserv_start);
+    char buffer [80];
+    strftime (buffer,sizeof(buffer)," %F_%H:%M",timeinfo);
+    cout << buffer;
+    timeinfo = localtime (&out.reserv_end);
+    strftime (buffer,sizeof(buffer)," %F_%H:%M",timeinfo);
+    cout << buffer << endl;
+}
+
+bool from_scope(uint32_t desired_ip, scope_settings* scope)
+{
+    uint32_t min = scope->srv_addr;
+    uint32_t max = scope->broadcast;
+    //cout << inet_ntoa(*(struct in_addr*)&desired_ip) <<  "<-input project \n";
+    uint32_t tmp = desired_ip;
+    // cout << inet_ntoa(*(struct in_addr*)&tmp) <<  "<-project \n";
+    // cout << inet_ntoa(*(struct in_addr*)&min) <<  "<-project \n";
+    // cout << inet_ntoa(*(struct in_addr*)&max) <<  "<-project \n";
+    // cout << (min < tmp && tmp < max) << " zevraj \n\n\n";
+    return (min < tmp && tmp < max);
+}
+
+uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type)
 {// jump = 2 size of magic coockie 4Bytes
     int cookie[COOKIE_SIZE] = {99, 130, 83, 99};
     for (size_t i = 0; i < COOKIE_SIZE; i++)
@@ -96,17 +165,25 @@ int get_message_type(uint8_t* options)
             return MAX_DHCP_OPTIONS_LENGTH;
     }
     int pos = COOKIE_SIZE;
-    while( pos < MAX_DHCP_OPTIONS_LENGTH - 2)
+    uint32_t result = UINT32_MAX;
+    while( pos < MAX_DHCP_OPTIONS_LENGTH - info_len)
     {
         //printf ("|%u|%u|%u|\n",options[pos],options[pos+1], options[pos+2]);
-        if (options[pos] == MSG && options[pos+1] == 1)
-            return options[pos+2];
+        if (options[pos] == info_type && options[pos+1] == info_len)
+        {
+            if (info_type == MSG)
+                result = options[pos + 2];
+            else
+                memcpy (&result, &options[pos + 2] , info_len);
+            //cout << "result is : "<< inet_ntoa(*(struct in_addr*)&result)<<endl;
+            return result;
+        }
         else if (options[pos] == 0)
             pos++;
         else
             pos = pos + options[pos+1] + 2;
     }
-    return MAX_DHCP_OPTIONS_LENGTH;
+    return UINT32_MAX;
 }
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
@@ -148,10 +225,10 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
         pos += sizeof(r.lease_time);
     }
     p->options[pos]=255;
-    printf("packet type %u:\t", t);
+    //printf("packet type %u:\t", t);
     for (size_t i = 0; i <= pos; i++)
     {
-        printf("%u|", p->options[i] );
+        //printf("%u|", p->options[i] );
     }
     cout<<endl;
     return;
@@ -160,19 +237,18 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
 int create_socket()
 {// copied from my IPK project2 and edited
     int sockfd;
-    struct sockaddr_in server_addr;
+    struct sockaddr_in addr;
     // First call socket() function
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
         return -1;
     // Initialize socket structure
-    //bzero((char *) &server_addr, sizeof(server_addr));
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(PORT);
     // Binding socket
-    if (bind(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0)
+    if (bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
         return -1;
     // Returning binded socket
     return sockfd;
@@ -199,21 +275,29 @@ uint32_t get_ip_addr(scope_settings* scope, uint32_t ip)
     }
 }
 
-size_t record_position(record item, vector<record> list)
+size_t record_position(record item, vector<record> list, bool mac)
 {
     size_t index = 0;
     for ( auto i = list.begin(); i < list.end(); i++, index++)
     {
-        if(item.host_ip != i->host_ip)
-            continue;
-        if (memcmp(item.chaddr, i->chaddr, MAX_DHCP_CHADDR_LENGTH) != 0)
-            continue;
-        if(item.reserv_start != i->reserv_start)
-            continue;
-        if(item.reserv_end != i->reserv_end)
-            continue;
+        if(mac)
+        {
+            if (memcmp(item.chaddr, i->chaddr, MAX_DHCP_CHADDR_LENGTH) == 0)
+                break;
+        }
         else
-            break;
+        {
+            if (memcmp(item.chaddr, i->chaddr, MAX_DHCP_CHADDR_LENGTH) != 0)
+                continue;
+            if(item.host_ip != i->host_ip)
+                continue;
+            if(item.reserv_start != i->reserv_start)
+                continue;
+            if(item.reserv_end != i->reserv_end)
+                continue;
+            else
+                break;
+        }
     }
     return index;
 }
@@ -221,7 +305,7 @@ size_t record_position(record item, vector<record> list)
 void delete_record(record item, vector<record> &list)
 {
     size_t pos;
-    while ( (pos = record_position(item, list)) != list.size())
+    while ( (pos = record_position(item, list, false)) != list.size())
     {
         list.erase(list.begin() + pos);
     }
