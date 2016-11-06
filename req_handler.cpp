@@ -34,7 +34,11 @@ bool handle_request(scope_settings* scope, int* s)
             if (message_type == DHCPDISCOVER)
             {
                 resp_type = DHCPOFFER;
-                offered_ip = get_ip_addr(scope, scope->first_addr); //take first available address from scope
+                uint32_t desired_ip = get_info(p.options, 4, REQIP);
+                if (! from_scope(desired_ip, scope))
+                    offered_ip = get_ip_addr(scope, scope->first_addr);
+                else
+                    offered_ip = desired_ip; //take first available address from scope
                 if (offered_ip == UINT32_MAX)
                     continue;
             } // REQUEST potrebujem zistit ci mam zaznam pre
@@ -45,7 +49,7 @@ bool handle_request(scope_settings* scope, int* s)
                 if (id != records.size()) // there is record for this mac address
                 {
                     offered_ip = rec.host_ip = records[id].host_ip;
-                    records.erase(records.begin()+id);
+                    delete_record(rec, records);
                 }
                 uint32_t desired_ip = p.ciaddr;
                 cout << desired_ip << endl;
@@ -53,6 +57,10 @@ bool handle_request(scope_settings* scope, int* s)
                 {
                     desired_ip = get_info(p.options, 4, REQIP);
                     if (! from_scope(desired_ip, scope))
+                        continue;
+                    if (item_in_list(desired_ip, scope->exclude_list))
+                        desired_ip = get_ip_addr(scope, scope->first_addr);
+                    if (offered_ip == UINT32_MAX)
                         continue;
                     rec.host_ip = offered_ip = desired_ip;
                 }
@@ -94,6 +102,7 @@ bool handle_request(scope_settings* scope, int* s)
             {
                 offered_ip = UINT32_MAX;
                 printrecord(rec);
+                delete_record(rec, records);
                 records.insert(records.end(), rec);
             }
         }
@@ -104,16 +113,7 @@ bool handle_request(scope_settings* scope, int* s)
                 printf("| %u |\n", p.options[i] );
             }
             memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
-            size_t id = record_position(rec, records, true);
-            if (id != records.size()) // there is record for this mac address
-            {
-                records.erase(records.begin()+id);
-                return_ip_addr(scope, records[id].host_ip);
-            }
-            for (auto item : records)
-            {
-                cout << "Zaznam pre : "<< inet_ntoa(*(struct in_addr*) &item.host_ip)<<endl;
-            }
+            delete_record(rec, records);
         }
         for (auto item : records)
         {
