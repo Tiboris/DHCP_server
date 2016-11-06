@@ -14,10 +14,11 @@ bool handle_request(scope_settings* scope, int* s)
     struct sockaddr_in c_addr;
     socklen_t c_len = sizeof(c_addr);
     vector<record> records;
-    record rec;
+    record new_record;
     uint32_t offered_ip = UINT32_MAX;
     while (true)
     {
+        size_t id;
         dhcp_packet p;
         int r = recvfrom(*s, &p, sizeof(p), 0, (struct sockaddr*)&c_addr, &c_len);
         if (r < MIN_DHCP_PCK_LEN)
@@ -25,73 +26,63 @@ bool handle_request(scope_settings* scope, int* s)
             cerr << "ERR on recv\n";
             continue;
         }
-        int message_type = get_info(p.options, 1, MSG);
-        if (message_type == MAX_DHCP_OPTIONS_LENGTH)
+        uint32_t message_type = get_info(p.options, 1, MSG);
+        if (message_type == UINT32_MAX)
             continue;
         else if (message_type == DHCPDISCOVER || message_type == DHCPREQUEST)
         {// reply with DHCPOFFER
-            int resp_type = DHCPACK;
+            uint32_t resp_type = DHCPACK;
+            memcpy(&new_record.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
             if (message_type == DHCPDISCOVER)
             {
                 resp_type = DHCPOFFER;
-                uint32_t desired_ip = get_info(p.options, 4, REQIP);
-                rec.host_ip = desired_ip;
-                if (! from_scope(desired_ip, scope))
-                    offered_ip = get_ip_addr(scope, scope->first_addr);
-                else if (record_position(rec, records, IP_SIZE) != records.size())
-                    offered_ip = get_ip_addr(scope, scope->first_addr);
+                id = record_position(new_record, records, MAC_SIZE);
+                if (id != records.size()) // there is record for mac use this ip
+                {// use already bound ip and delete records for mac from vector
+                    new_record.host_ip = records[id].host_ip;
+                    delete_record(new_record, records);
+                }
                 else
-                    offered_ip = desired_ip; //take first available address from scope
-                if (! from_scope(offered_ip, scope))
-                    continue;
-            } // REQUEST potrebujem zistit ci mam zaznam pre
-            else
+                {// take ip from scope and offer it to host
+                    new_record.host_ip = get_ip_addr(scope, scope->first_addr);
+                    if (! from_scope(new_record.host_ip, scope))
+                        continue; // when out of addresses then ignore
+                }
+                offered_ip = new_record.host_ip;
+            }
+            else // DHCPREQUEST
             {
-                memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
-                size_t id = record_position(rec, records, MAC_SIZE);
-                if (id != records.size()) // there is record for this mac address
-                {
-                    offered_ip = rec.host_ip = records[id].host_ip;
-                    delete_record(rec, records);
+                new_record.host_ip = p.ciaddr;
+                id = record_position(new_record, records, MAC_SIZE);
+                if (id != records.size()) // there is record for this mac
+                {// use already bound ip and delete records for mac from vector
+                    new_record.host_ip = records[id].host_ip;
+                    delete_record(new_record, records);
                 }
-                uint32_t desired_ip = p.ciaddr;
-                if (desired_ip == 0)                 // SELECTING
+                else if (p.ciaddr == 0)                 // SELECTING
                 {
-                    desired_ip = get_info(p.options, 4, REQIP);
-                    if (! from_scope(desired_ip, scope))
-                        continue;
-                    if (desired_ip != offered_ip)
-                        desired_ip = get_ip_addr(scope, scope->first_addr);
-                    if (! from_scope(desired_ip, scope))
-                        continue;
-                    rec.host_ip = offered_ip = desired_ip;
-                    if (record_position(rec, records, IP_SIZE) != records.size())
-                        continue;
+                    new_record.host_ip = get_info(p.options, 4, REQIP); // parse desired ip from options
                 }
-                else if (from_scope(desired_ip, scope))              // client address is set and from scope RENEW
+                else if (record_position(new_record, records, IP_SIZE) != records.size()) // client address is set and from scope RENEW
                 {
-                    offered_ip = desired_ip;
-                    rec.host_ip = offered_ip;
+                    resp_type = DHCPNAK;
                 }
-                else
-                {
-                    continue;
-                }
-                rec.reserv_start = time(nullptr);
-                rec.reserv_end = rec.reserv_start + HOUR;
+                new_record.reserv_start = time(nullptr);
+                new_record.reserv_end = new_record.reserv_start + HOUR;
+                offered_ip = new_record.host_ip;
             }
             struct sockaddr_in br_addr;
             br_addr.sin_family = AF_INET;                       // set IPv4 addressing
             br_addr.sin_addr.s_addr = scope->broadcast;         // broadcast address not working
             br_addr.sin_port = htons(CLI_PORT);                 // the client listens on this port
             int on = 1;
-            if (p.ciaddr == offered_ip)
+            if (p.ciaddr == offered_ip && resp_type != DHCPNAK && p.ciaddr != 0)
             {
                 br_addr.sin_addr.s_addr = p.ciaddr;
             }
             else if ((setsockopt(*s, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) == -1)
             {
-                return_ip_addr(scope, offered_ip);
+                return_ip_to_scope(offered_ip, scope);
                 continue;
             }
             set_resp(scope, &p, offered_ip, resp_type);
@@ -99,34 +90,36 @@ bool handle_request(scope_settings* scope, int* s)
             if (r < 0)
             {
                 cerr << "ERR on sendto\n";
-                return_ip_addr(scope, offered_ip);
+                return_ip_to_scope(offered_ip, scope);
                 continue;
             }
             if (message_type != DHCPDISCOVER)
             {
                 offered_ip = UINT32_MAX;
-                printrecord(rec);
-                delete_record(rec, records);
-                records.insert(records.end(), rec);
+                printrecord(new_record);
+                delete_record(new_record, records);
+                records.insert(records.end(), new_record);
             }
         }
         else if (message_type == DHCPRELEASE)
         {
-            memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
-            delete_record(rec, records);
+            memcpy(&new_record.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
+            id = record_position(new_record, records, MAC_SIZE);
+            return_ip_to_scope(records[id].host_ip, scope);
+            delete_record(new_record, records);
         }
-        // cout << "------------------------\n";
-        // for (auto item : records)
-        // {
-        //     for (size_t i = 0; i < MAC_SIZE; i++)
-        //     {
-        //         char c='\0';
-        //         (i == MAC_SIZE - 1) ? c=' ' : c=':';
-        //         cout << setw(2) << setfill ('0') << hex << +rec.chaddr[i] << c << dec;
-        //     }
-        //     cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
-        // }
-        // cout << "------------------------\n";
+        cout << "------------------------\n";
+        for (auto item : records)
+        {
+            for (size_t i = 0; i < MAC_SIZE; i++)
+            {
+                char c='\0';
+                (i == MAC_SIZE - 1) ? c=' ' : c=':';
+                cout << setw(2) << setfill ('0') << hex << +new_record.chaddr[i] << c << dec;
+            }
+            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
+        }
+        cout << "------------------------\n";
     }
     return EXIT_SUCCESS;
 }
@@ -162,13 +155,13 @@ bool from_scope(uint32_t desired_ip, scope_settings* scope)
 uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type)
 {// jump = 2 size of magic coockie 4Bytes
     int cookie[COOKIE_SIZE] = {99, 130, 83, 99};
+    uint32_t result = UINT32_MAX;
     for (size_t i = 0; i < COOKIE_SIZE; i++)
     {
         if (options[i]!=cookie[i])
-            return MAX_DHCP_OPTIONS_LENGTH;
+            return result;
     }
     int pos = COOKIE_SIZE;
-    uint32_t result = UINT32_MAX;
     while( pos < MAX_DHCP_OPTIONS_LENGTH - info_len)
     {
         if (options[pos] == info_type && options[pos+1] == info_len)
@@ -184,7 +177,7 @@ uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type)
         else
             pos = pos + options[pos+1] + 2;
     }
-    return UINT32_MAX;
+    return result;
 }
 
 void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
@@ -194,7 +187,10 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
     p->hops = ZERO;
     p->secs = ZERO;
     p->ciaddr = ZERO;
-    p->yiaddr = offr_ip;
+    if (r.msg_type != DHCPNAK)
+        p->yiaddr = offr_ip;
+    else  // NAK message does not contain yiaddr record
+        p->yiaddr = ZERO;
     p->siaddr = scope->srv_addr;
     memset(&p->sname, ZERO, MAX_DHCP_SNAME_LENGTH);
     size_t pos = ZERO;
@@ -205,26 +201,23 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
     pos += sizeof(r.msg_type_opt);
     memcpy(&p->options[pos], &r.msg_type, sizeof(r.msg_type));
     pos += sizeof(r.msg_type);
-    memcpy(&p->options[pos], &r.mask_type, sizeof(r.mask_type));
-    pos += sizeof(r.mask_type);
-    memcpy(&p->options[pos], &scope->mask, sizeof(scope->mask));
-    pos += sizeof(&scope->mask);
-    memcpy(&p->options[pos], &r.srv_identif, sizeof(r.srv_identif));
-    pos += sizeof(r.srv_identif);
-    memcpy(&p->options[pos], &scope->srv_addr, sizeof(scope->srv_addr));
-    pos += sizeof(&scope->srv_addr);
-    if (r.msg_type == DHCPNAK)
-    {   // ACK message does not contain yiaddr record
-        p->yiaddr = ZERO;
-    }
-    else
-    {   // ACK message does not contain lease time option too
+    if (r.msg_type != DHCPNAK)
+    {
+        memcpy(&p->options[pos], &r.mask_type, sizeof(r.mask_type));
+        pos += sizeof(r.mask_type);
+        memcpy(&p->options[pos], &scope->mask, sizeof(scope->mask));
+        pos += sizeof(&scope->mask);
+        // ACK message does not contain lease time option too
         memcpy(&p->options[pos], &r.lease_time_opt, sizeof(r.lease_time_opt));
         pos += sizeof(r.lease_time_opt);
         r.lease_time = htonl(r.lease_time); // change endian
         memcpy(&p->options[pos], &r.lease_time, sizeof(r.lease_time));
         pos += sizeof(r.lease_time);
     }
+    memcpy(&p->options[pos], &r.srv_identif, sizeof(r.srv_identif));
+    pos += sizeof(r.srv_identif);
+    memcpy(&p->options[pos], &scope->srv_addr, sizeof(scope->srv_addr));
+    pos += sizeof(&scope->srv_addr);
     p->options[pos]=255;
     return;
 }
@@ -300,7 +293,7 @@ void delete_record(record item, vector<record> &list)
     return;
 }
 
-void return_ip_addr(scope_settings* scope, uint32_t ip)
+void return_ip_to_scope(uint32_t ip, scope_settings* scope)
 {// https://en.wikipedia.org/wiki/Erase%E2%80%93remove_idiom
     if (item_in_list(ip, scope->exclude_list))
         scope->exclude_list.erase(remove(scope->exclude_list.begin(), scope->exclude_list.end(), ip), scope->exclude_list.end());
