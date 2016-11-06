@@ -35,17 +35,28 @@ bool handle_request(scope_settings* scope, int* s)
             {
                 resp_type = DHCPOFFER;
                 uint32_t desired_ip = get_info(p.options, 4, REQIP);
+                rec.host_ip = desired_ip;
                 if (! from_scope(desired_ip, scope))
                     offered_ip = get_ip_addr(scope, scope->first_addr);
+                else if (record_position(rec, records, IP_SIZE) != records.size())
+                    continue;
                 else
                     offered_ip = desired_ip; //take first available address from scope
+                cout << endl<< inet_ntoa(*(struct in_addr*)&desired_ip) << " is desired" << endl;
                 if (offered_ip == UINT32_MAX)
                     continue;
+                for (size_t i = 0; i < MAC_SIZE; i++)
+                {
+                    char c='\0';
+                    (i == MAC_SIZE - 1) ? c=' ' : c=':';
+                    cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
+                }
+                cout << inet_ntoa(*(struct in_addr*)&offered_ip) << " is offered" << endl<<  endl;
             } // REQUEST potrebujem zistit ci mam zaznam pre
             else
             {
                 memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
-                size_t id = record_position(rec, records, true);
+                size_t id = record_position(rec, records, MAC_SIZE);
                 if (id != records.size()) // there is record for this mac address
                 {
                     offered_ip = rec.host_ip = records[id].host_ip;
@@ -57,11 +68,13 @@ bool handle_request(scope_settings* scope, int* s)
                     desired_ip = get_info(p.options, 4, REQIP);
                     if (! from_scope(desired_ip, scope))
                         continue;
-                    if (item_in_list(desired_ip, scope->exclude_list))
+                    if (desired_ip != offered_ip)
                         desired_ip = get_ip_addr(scope, scope->first_addr);
-                    if (offered_ip == UINT32_MAX)
+                    if (! from_scope(desired_ip, scope))
                         continue;
                     rec.host_ip = offered_ip = desired_ip;
+                    if (record_position(rec, records, IP_SIZE) != records.size())
+                        continue;
                 }
                 else if (from_scope(desired_ip, scope))              // client address is set and from scope RENEW
                 {
@@ -87,6 +100,7 @@ bool handle_request(scope_settings* scope, int* s)
                 continue;
             }
             r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, sizeof(br_addr));
+            cout << inet_ntoa(*(struct in_addr*)&p.yiaddr) << " is yiaddr" << endl;
             if (r < 0)
             {
                 cerr << "ERR on sendto\n";
@@ -105,6 +119,18 @@ bool handle_request(scope_settings* scope, int* s)
         {
             memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
             delete_record(rec, records);
+        }
+        for (auto item : records)
+        {
+            cout << "------------------------\n";
+            for (size_t i = 0; i < MAC_SIZE; i++)
+            {
+                char c='\0';
+                (i == MAC_SIZE - 1) ? c=' ' : c=':';
+                cout << setw(2) << setfill ('0') << hex << +rec.chaddr[i] << c << dec;
+            }
+            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
+            cout << "------------------------\n";
         }
     }
     return EXIT_SUCCESS;
@@ -249,29 +275,22 @@ uint32_t get_ip_addr(scope_settings* scope, uint32_t ip)
     }
 }
 
-size_t record_position(record item, vector<record> list, bool mac)
+size_t record_position(record item, vector<record> list, int by)
 {
     size_t index = 0;
     for ( auto i = list.begin(); i < list.end(); i++, index++)
     {
-        if(mac)
+        if (by == MAC_SIZE)
         {
             if (memcmp(item.chaddr, i->chaddr, MAX_DHCP_CHADDR_LENGTH) == 0)
                 break;
         }
-        else
+        else if (by == IP_SIZE)
         {
-            if (memcmp(item.chaddr, i->chaddr, MAX_DHCP_CHADDR_LENGTH) != 0)
-                continue;
-            if(item.host_ip != i->host_ip)
-                continue;
-            if(item.reserv_start != i->reserv_start)
-                continue;
-            if(item.reserv_end != i->reserv_end)
-                continue;
-            else
+            if (item.host_ip == i->host_ip)
                 break;
         }
+
     }
     return index;
 }
@@ -279,7 +298,7 @@ size_t record_position(record item, vector<record> list, bool mac)
 void delete_record(record item, vector<record> &list)
 {
     size_t pos;
-    while ( (pos = record_position(item, list, false)) != list.size())
+    while ( (pos = record_position(item, list, MAC_SIZE)) != list.size())
     {
         list.erase(list.begin() + pos);
     }

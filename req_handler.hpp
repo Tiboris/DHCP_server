@@ -45,7 +45,7 @@ typedef struct response_struct
     uint16_t msg_type_opt = MSG_T;
     uint8_t  msg_type = DHCPOFFER;
     uint16_t lease_time_opt = LEASE_T;
-    uint32_t lease_time = HOUR;
+    uint32_t lease_time = 60;
     uint16_t mask_type = MASK_T;
     uint16_t srv_identif = SRV_ID;
 }response;
@@ -68,9 +68,9 @@ uint32_t get_ip_addr(scope_settings* scope, uint32_t ip);
 
 bool from_scope(uint32_t desired_ip, scope_settings* scope);
 
-dhcp_packet save_request(scope_settings* scope, uint8_t* packet);
+size_t record_position(record item, vector<record> list, int by);
 
-size_t record_position(record item, vector<record> list, bool mac);
+dhcp_packet save_request(scope_settings* scope, uint8_t* packet);
 
 uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type);
 
