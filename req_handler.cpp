@@ -52,7 +52,6 @@ bool handle_request(scope_settings* scope, int* s)
                     delete_record(rec, records);
                 }
                 uint32_t desired_ip = p.ciaddr;
-                cout << desired_ip << endl;
                 if (desired_ip == 0)                 // SELECTING
                 {
                     desired_ip = get_info(p.options, 4, REQIP);
@@ -68,17 +67,13 @@ bool handle_request(scope_settings* scope, int* s)
                 {
                     offered_ip = desired_ip;
                     rec.host_ip = offered_ip;
-                    cout << inet_ntoa(*(struct in_addr*)&offered_ip) <<  " <- renew \n";
-                    cout <<" pr eco\n\n"<<endl;
                 }
                 else
                 {
-                    cout <<"nema sa stat"<<endl;
                     continue;
                 }
                 rec.reserv_start = time(nullptr);
                 rec.reserv_end = rec.reserv_start + HOUR;
-                cout << offered_ip << " <> " << p.ciaddr << endl;
             }
             set_resp(scope, &p, offered_ip, resp_type);
             struct sockaddr_in br_addr;
@@ -108,16 +103,8 @@ bool handle_request(scope_settings* scope, int* s)
         }
         else if (message_type == DHCPRELEASE)
         {
-            cout << "to co toto zabijem sa !!!\n";
-            for (size_t i = 0; i < MAX_DHCP_OPTIONS_LENGTH; i++) {
-                printf("| %u |\n", p.options[i] );
-            }
             memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
             delete_record(rec, records);
-        }
-        for (auto item : records)
-        {
-            cout << "Zaznam pre : "<< inet_ntoa(*(struct in_addr*) &item.host_ip)<<endl;
         }
     }
     return EXIT_SUCCESS;
@@ -147,12 +134,7 @@ bool from_scope(uint32_t desired_ip, scope_settings* scope)
 {
     uint32_t min = scope->srv_addr;
     uint32_t max = scope->broadcast;
-    //cout << inet_ntoa(*(struct in_addr*)&desired_ip) <<  "<-input project \n";
     uint32_t tmp = desired_ip;
-    // cout << inet_ntoa(*(struct in_addr*)&tmp) <<  "<-project \n";
-    // cout << inet_ntoa(*(struct in_addr*)&min) <<  "<-project \n";
-    // cout << inet_ntoa(*(struct in_addr*)&max) <<  "<-project \n";
-    // cout << (min < tmp && tmp < max) << " zevraj \n\n\n";
     return (min < tmp && tmp < max);
 }
 
@@ -168,14 +150,12 @@ uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type)
     uint32_t result = UINT32_MAX;
     while( pos < MAX_DHCP_OPTIONS_LENGTH - info_len)
     {
-        //printf ("|%u|%u|%u|\n",options[pos],options[pos+1], options[pos+2]);
         if (options[pos] == info_type && options[pos+1] == info_len)
         {
             if (info_type == MSG)
                 result = options[pos + 2];
             else
                 memcpy (&result, &options[pos + 2] , info_len);
-            //cout << "result is : "<< inet_ntoa(*(struct in_addr*)&result)<<endl;
             return result;
         }
         else if (options[pos] == 0)
@@ -225,12 +205,6 @@ void set_resp(scope_settings* scope, dhcp_packet* p, u_int32_t offr_ip, int t)
         pos += sizeof(r.lease_time);
     }
     p->options[pos]=255;
-    //printf("packet type %u:\t", t);
-    for (size_t i = 0; i <= pos; i++)
-    {
-        //printf("%u|", p->options[i] );
-    }
-    cout<<endl;
     return;
 }
 
