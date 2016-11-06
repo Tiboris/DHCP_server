@@ -39,19 +39,11 @@ bool handle_request(scope_settings* scope, int* s)
                 if (! from_scope(desired_ip, scope))
                     offered_ip = get_ip_addr(scope, scope->first_addr);
                 else if (record_position(rec, records, IP_SIZE) != records.size())
-                    continue;
+                    offered_ip = get_ip_addr(scope, scope->first_addr);
                 else
                     offered_ip = desired_ip; //take first available address from scope
-                cout << endl<< inet_ntoa(*(struct in_addr*)&desired_ip) << " is desired" << endl;
-                if (offered_ip == UINT32_MAX)
+                if (! from_scope(offered_ip, scope))
                     continue;
-                for (size_t i = 0; i < MAC_SIZE; i++)
-                {
-                    char c='\0';
-                    (i == MAC_SIZE - 1) ? c=' ' : c=':';
-                    cout << setw(2) << setfill ('0') << hex << +p.chaddr[i] << c << dec;
-                }
-                cout << inet_ntoa(*(struct in_addr*)&offered_ip) << " is offered" << endl<<  endl;
             } // REQUEST potrebujem zistit ci mam zaznam pre
             else
             {
@@ -100,7 +92,6 @@ bool handle_request(scope_settings* scope, int* s)
                 continue;
             }
             r = sendto(*s, &p, sizeof(p), 0, (struct sockaddr*)&br_addr, sizeof(br_addr));
-            cout << inet_ntoa(*(struct in_addr*)&p.yiaddr) << " is yiaddr" << endl;
             if (r < 0)
             {
                 cerr << "ERR on sendto\n";
@@ -120,18 +111,18 @@ bool handle_request(scope_settings* scope, int* s)
             memcpy(&rec.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
             delete_record(rec, records);
         }
-        for (auto item : records)
-        {
-            cout << "------------------------\n";
-            for (size_t i = 0; i < MAC_SIZE; i++)
-            {
-                char c='\0';
-                (i == MAC_SIZE - 1) ? c=' ' : c=':';
-                cout << setw(2) << setfill ('0') << hex << +rec.chaddr[i] << c << dec;
-            }
-            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
-            cout << "------------------------\n";
-        }
+        // cout << "------------------------\n";
+        // for (auto item : records)
+        // {
+        //     for (size_t i = 0; i < MAC_SIZE; i++)
+        //     {
+        //         char c='\0';
+        //         (i == MAC_SIZE - 1) ? c=' ' : c=':';
+        //         cout << setw(2) << setfill ('0') << hex << +rec.chaddr[i] << c << dec;
+        //     }
+        //     cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
+        // }
+        // cout << "------------------------\n";
     }
     return EXIT_SUCCESS;
 }
