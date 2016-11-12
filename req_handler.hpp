@@ -60,8 +60,6 @@ void printrecord(record out);
 
 //bool err_file(scope_settings* scope);
 
-void delete_expired(vector<record> &records);
-
 bool handle_request(scope_settings* scope, int* s);
 
 void delete_record(record item, vector<record> &list);
@@ -77,6 +75,8 @@ bool from_scope(uint32_t desired_ip, scope_settings* scope);
 size_t record_position(record item, vector<record> list, int by);
 
 dhcp_packet save_request(scope_settings* scope, uint8_t* packet);
+
+void delete_expired(vector<record> &records, scope_settings* scope);
 
 uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type);
 

@@ -28,7 +28,7 @@ bool handle_request(scope_settings* scope, int* s)
     {
         size_t id;
         dhcp_packet p;
-        delete_expired(records);
+        delete_expired(records, scope);
         int r = recvfrom(*s, &p, sizeof(p), 0, (struct sockaddr*)&c_addr, &c_len);
         if (r < MIN_DHCP_PCK_LEN)
         {
@@ -69,7 +69,7 @@ bool handle_request(scope_settings* scope, int* s)
                     new_record.permanent = records[id].permanent;
                     delete_record(new_record, records);
                 }
-                else if (p.ciaddr == 0)                 // SELECTING
+                else if (p.ciaddr == 0)
                 {
                     new_record.host_ip = get_info(p.options, 4, REQIP); // parse desired ip from options
                     id = record_position(new_record, records, IP_SIZE);
@@ -174,13 +174,16 @@ bool handle_request(scope_settings* scope, int* s)
 //     return EXIT_SUCCESS;
 // }
 
-void delete_expired(vector<record> &records)
+void delete_expired(vector<record> &records, scope_settings* scope);
 {// funtion deletes expired bindings from records
     time_t time_now = time(nullptr);
     for (auto item : records)
     {
         if (item.reserv_end < time_now)
+        {
             delete_record(item, records);
+            return_ip_to_scope(item.host_ip, scope);
+        }
     }
 }
 
