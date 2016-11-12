@@ -174,7 +174,7 @@ bool handle_request(scope_settings* scope, int* s)
 //     return EXIT_SUCCESS;
 // }
 
-void delete_expired(vector<record> &records, scope_settings* scope);
+void delete_expired(vector<record> &records, scope_settings* scope)
 {// funtion deletes expired bindings from records
     time_t time_now = time(nullptr);
     for (auto item : records)
