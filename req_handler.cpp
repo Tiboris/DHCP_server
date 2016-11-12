@@ -4,6 +4,11 @@
  */
 using namespace std;
 
+//regex mac_ip("(([0-9a-fA-F][0-9a-fA-F]:){5}[0-9a-fA-F][0-9a-fA-F]) ((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])[.]){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))");
+
+// 00:0b:82:01:fc:42 192.168.0.99
+// c8:0a:a9:cd:7d:81 192.168.0.101
+
 bool handle_request(scope_settings* scope, int* s)
 {
     if ((*s = create_socket()) == -1)
@@ -17,6 +22,8 @@ bool handle_request(scope_settings* scope, int* s)
     record new_record;
     response info;
     uint32_t offered_ip = UINT32_MAX;
+    // if (scope->static_reserv && err_file(scope))
+    //     return EXIT_FAILURE;
     while (true)
     {
         size_t id;
@@ -65,10 +72,12 @@ bool handle_request(scope_settings* scope, int* s)
                 {
                     new_record.host_ip = get_info(p.options, 4, REQIP); // parse desired ip from options
                 }
-                else if (record_position(new_record, records, IP_SIZE) != records.size()) // client address is set and from scope RENEW
+                else if (record_position(new_record, records, IP_SIZE) != records.size())
                 {
                     resp_type = DHCPNAK;
                 }
+                if (! item_in_list(new_record.host_ip, scope->exclude_list))
+                    scope->exclude_list.insert(scope->exclude_list.end(), new_record.host_ip);
                 new_record.reserv_start = time(nullptr);
                 new_record.reserv_end = new_record.reserv_start + info.lease_time;
                 offered_ip = new_record.host_ip;
@@ -110,21 +119,41 @@ bool handle_request(scope_settings* scope, int* s)
             return_ip_to_scope(records[id].host_ip, scope);
             delete_record(new_record, records);
         }
-        cout << "------------------------\n";
-        for (auto item : records)
-        {
-            for (size_t i = 0; i < MAC_SIZE; i++)
-            {
-                char c='\0';
-                (i == MAC_SIZE - 1) ? c=' ' : c=':';
-                cout << setw(2) << setfill ('0') << hex << +item.chaddr[i] << c << dec;
-            }
-            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
-        }
-        cout << "------------------------\n";
+        // cout << "------------------------\n";
+        // for (auto item : records)
+        // {
+        //     for (size_t i = 0; i < MAC_SIZE; i++)
+        //     {
+        //         char c='\0';
+        //         (i == MAC_SIZE - 1) ? c=' ' : c=':';
+        //         cout << setw(2) << setfill ('0') << hex << +item.chaddr[i] << c << dec;
+        //     }
+        //     cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
+        // }
+        // cout << "----------|||||---------\n";
     }
     return EXIT_SUCCESS;
 }
+
+// bool err_file(scope_settings* scope)
+// {
+//     string line;
+//     ifstream perm_reserv (scope->filename);
+//     if (perm_reserv.is_open())
+//     {
+//         while (getline(perm_reserv,line))
+//         {
+//             cout << line << '\n'; // there should be check for every line in file
+//         }
+//         perm_reserv.close();
+//     }
+//     else
+//     {
+//         cerr << "Error opening file" << endl;
+//         return EXIT_FAILURE;
+//     }
+//     return EXIT_SUCCESS;
+// }
 
 void delete_expired(vector<record> &records)
 {

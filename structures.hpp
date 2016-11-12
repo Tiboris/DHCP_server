@@ -20,6 +20,8 @@ typedef struct scope_settings_struct
     vector<uint32_t> exclude_list;  /* excluded ip addresses */
     uint32_t first_addr;            /* first available address */
     uint32_t broadcast;             /* broadcast address */
+    bool static_reserv = false;
+    string filename;
 } scope_settings;
 
 typedef struct record_struct

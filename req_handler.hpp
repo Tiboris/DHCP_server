@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cstdio>
 #include <ctime>
+#include <regex>
+#include <fstream>
 #include <iomanip>
 #include <unistd.h>
 #include <cstdint>
@@ -55,6 +57,8 @@ using namespace std;
 int create_socket();
 
 void printrecord(record out);
+
+//bool err_file(scope_settings* scope);
 
 void delete_expired(vector<record> &records);
 
