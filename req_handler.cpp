@@ -15,11 +15,13 @@ bool handle_request(scope_settings* scope, int* s)
     socklen_t c_len = sizeof(c_addr);
     vector<record> records;
     record new_record;
+    response info;
     uint32_t offered_ip = UINT32_MAX;
     while (true)
     {
         size_t id;
         dhcp_packet p;
+        delete_expired(records);
         int r = recvfrom(*s, &p, sizeof(p), 0, (struct sockaddr*)&c_addr, &c_len);
         if (r < MIN_DHCP_PCK_LEN)
         {
@@ -68,7 +70,7 @@ bool handle_request(scope_settings* scope, int* s)
                     resp_type = DHCPNAK;
                 }
                 new_record.reserv_start = time(nullptr);
-                new_record.reserv_end = new_record.reserv_start + HOUR;
+                new_record.reserv_end = new_record.reserv_start + info.lease_time;
                 offered_ip = new_record.host_ip;
             }
             struct sockaddr_in br_addr;
@@ -115,13 +117,23 @@ bool handle_request(scope_settings* scope, int* s)
             {
                 char c='\0';
                 (i == MAC_SIZE - 1) ? c=' ' : c=':';
-                cout << setw(2) << setfill ('0') << hex << +new_record.chaddr[i] << c << dec;
+                cout << setw(2) << setfill ('0') << hex << +item.chaddr[i] << c << dec;
             }
             cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
         }
         cout << "------------------------\n";
     }
     return EXIT_SUCCESS;
+}
+
+void delete_expired(vector<record> &records)
+{
+    time_t time_now = time(nullptr);
+    for (auto item : records)
+    {
+        if (item.reserv_end < time_now)
+            delete_record(item, records);
+    }
 }
 
 void printrecord(record out)

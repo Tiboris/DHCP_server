@@ -20,14 +20,14 @@ typedef struct scope_settings_struct
     vector<uint32_t> exclude_list;  /* excluded ip addresses */
     uint32_t first_addr;            /* first available address */
     uint32_t broadcast;             /* broadcast address */
-}scope_settings;
+} scope_settings;
 
 typedef struct record_struct
 {
-    uint32_t host_ip;                           /* IP addr */
-    uint8_t  chaddr [MAX_DHCP_CHADDR_LENGTH];   /* MAC addr */
-    time_t reserv_start;                        /* start type */
-    time_t reserv_end;                          /* ending time */
+    uint32_t host_ip;                             /* IP addr */
+    uint8_t  chaddr [MAX_DHCP_CHADDR_LENGTH];     /* MAC addr */
+    time_t   reserv_start;                        /* start type */
+    time_t   reserv_end;                          /* ending time */
 } __attribute__ ((packed)) record;
 
 typedef struct struct_dhcp_packet
@@ -43,10 +43,10 @@ typedef struct struct_dhcp_packet
     uint32_t yiaddr;               /* IP address of client machine (offered by this the DHCP server) */
     uint32_t siaddr;               /* IP address of this DHCP server */
     uint32_t giaddr;               /* IP address of DHCP relay */
-    uint8_t chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
-    uint8_t sname [MAX_DHCP_SNAME_LENGTH];      /* name of DHCP server */
-    uint8_t file [MAX_DHCP_FILE_LENGTH];        /* boot file name (used for diskless booting?) */
-    uint8_t options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
+    uint8_t  chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
+    uint8_t  sname [MAX_DHCP_SNAME_LENGTH];      /* name of DHCP server */
+    uint8_t  file [MAX_DHCP_FILE_LENGTH];        /* boot file name (used for diskless booting?) */
+    uint8_t  options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
 } __attribute__ ((packed)) dhcp_packet;
 
 #endif

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cstdio>
 #include <ctime>
-#include <iomanip>      // std::setw
+#include <iomanip>
 #include <unistd.h>
 #include <cstdint>
 #include <string.h>
@@ -14,7 +14,7 @@
 
 #include "structures.hpp"
 
-#define UDP_PROTO           17
+#define ZERO                0
 
 #define BOOTREPLY           2
 #define COOKIE_SIZE         4
@@ -39,18 +39,16 @@
 
 #define HOUR                3600            // hour in seconds
 
-#define ZERO 0
-
 typedef struct response_struct
 {
-    uint32_t magic_cookie = COOKIE;
-    uint16_t msg_type_opt = MSG_T;
-    uint8_t  msg_type = DHCPOFFER;
+    uint32_t magic_cookie   = COOKIE;
+    uint16_t msg_type_opt   = MSG_T;
+    uint8_t  msg_type       = DHCPOFFER;
     uint16_t lease_time_opt = LEASE_T;
-    uint32_t lease_time = 60;
-    uint16_t mask_type = MASK_T;
-    uint16_t srv_identif = SRV_ID;
-}response;
+    uint32_t lease_time     = 60;
+    uint16_t mask_type      = MASK_T;
+    uint16_t srv_identif    = SRV_ID;
+} response;
 
 using namespace std;
 
@@ -58,15 +56,17 @@ int create_socket();
 
 void printrecord(record out);
 
+void delete_expired(vector<record> &records);
+
 bool handle_request(scope_settings* scope, int* s);
 
 void delete_record(record item, vector<record> &list);
 
 bool item_in_list(uint32_t item, vector<uint32_t> list);
 
-void return_ip_addr(scope_settings* scope, uint32_t ip);
-
 uint32_t get_ip_addr(scope_settings* scope, uint32_t ip);
+
+void return_ip_to_scope(uint32_t ip, scope_settings* scope);
 
 bool from_scope(uint32_t desired_ip, scope_settings* scope);
 
