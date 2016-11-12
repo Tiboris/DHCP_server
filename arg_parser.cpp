@@ -97,10 +97,10 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
     }
     uint32_t pflag = 0;
     uint32_t eflag = 0;
-    uint32_t sflag = 0;
+    //uint32_t sflag = 0;
     int max_argc_val = 1;
     int c;
-    while ((c = getopt (argc, argv, "p:e:s:")) != -1)
+    while ((c = getopt (argc, argv, "p:e:")) != -1)
     {
         switch (c)
         {
