@@ -32,7 +32,7 @@ bool handle_request(scope_settings* scope, int* s)
         int r = recvfrom(*s, &p, sizeof(p), 0, (struct sockaddr*)&c_addr, &c_len);
         if (r < MIN_DHCP_PCK_LEN)
         {
-            cerr << "ERR on recv\n";
+            cerr << "ERR on recvfrom\n";
             continue;
         }
         uint32_t message_type = get_info(p.options, 1, MSG);
@@ -66,20 +66,34 @@ bool handle_request(scope_settings* scope, int* s)
                 if (id != records.size()) // there is record for this mac
                 {// use already bound ip and delete records for mac from vector
                     new_record.host_ip = records[id].host_ip;
+                    new_record.permanent = records[id].permanent;
                     delete_record(new_record, records);
                 }
                 else if (p.ciaddr == 0)                 // SELECTING
                 {
                     new_record.host_ip = get_info(p.options, 4, REQIP); // parse desired ip from options
+                    id = record_position(new_record, records, IP_SIZE);
+                    if (id != records.size()  && records[id].host_ip != new_record.host_ip && p.siaddr == scope->srv_addr)
+                        resp_type = DHCPNAK;
                 }
-                else if (record_position(new_record, records, IP_SIZE) != records.size())
+                else if ((id = record_position(new_record, records, IP_SIZE)) != records.size())
+                {
+                    if (records[id].chaddr != new_record.chaddr)
+                        resp_type = DHCPNAK;
+                }
+                else if (item_in_list(new_record.host_ip, scope->exclude_list))
                 {
                     resp_type = DHCPNAK;
                 }
-                if (! item_in_list(new_record.host_ip, scope->exclude_list))
+                if (! from_scope(new_record.host_ip, scope) || p.giaddr != 0)
+                    resp_type = DHCPNAK;
+                if (! item_in_list(new_record.host_ip, scope->exclude_list) && resp_type != DHCPNAK)
                     scope->exclude_list.insert(scope->exclude_list.end(), new_record.host_ip);
                 new_record.reserv_start = time(nullptr);
-                new_record.reserv_end = new_record.reserv_start + info.lease_time;
+                if (new_record.permanent)
+                    new_record.reserv_end = UINT32_MAX;
+                else
+                    new_record.reserv_end = new_record.reserv_start + info.lease_time;
                 offered_ip = new_record.host_ip;
             }
             struct sockaddr_in br_addr;
@@ -112,25 +126,30 @@ bool handle_request(scope_settings* scope, int* s)
                 records.insert(records.end(), new_record);
             }
         }
-        else if (message_type == DHCPRELEASE)
+        else if (message_type == DHCPRELEASE && ! new_record.permanent)
         {
             memcpy(&new_record.chaddr, &p.chaddr, MAX_DHCP_CHADDR_LENGTH);
             id = record_position(new_record, records, MAC_SIZE);
             return_ip_to_scope(records[id].host_ip, scope);
             delete_record(new_record, records);
         }
-        // cout << "------------------------\n";
-        // for (auto item : records)
-        // {
-        //     for (size_t i = 0; i < MAC_SIZE; i++)
-        //     {
-        //         char c='\0';
-        //         (i == MAC_SIZE - 1) ? c=' ' : c=':';
-        //         cout << setw(2) << setfill ('0') << hex << +item.chaddr[i] << c << dec;
-        //     }
-        //     cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
-        // }
-        // cout << "----------|||||---------\n";
+        cout << "----------*****---------\n"; // debug print
+        for (auto i : scope->exclude_list)
+        {
+           cout << inet_ntoa(*(struct in_addr*)&i) << " is excluded\n";
+        }
+        cout << "------------------------\n";
+        for (auto item : records)
+        {
+            for (size_t i = 0; i < MAC_SIZE; i++)
+            {
+                char c='\0';
+                (i == MAC_SIZE - 1) ? c=' ' : c=':';
+                cout << setw(2) << setfill ('0') << hex << +item.chaddr[i] << c << dec;
+            }
+            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
+        }
+        cout << "----------|||||---------\n";
     }
     return EXIT_SUCCESS;
 }
@@ -156,7 +175,7 @@ bool handle_request(scope_settings* scope, int* s)
 // }
 
 void delete_expired(vector<record> &records)
-{
+{// funtion deletes expired bindings from records
     time_t time_now = time(nullptr);
     for (auto item : records)
     {
@@ -166,14 +185,15 @@ void delete_expired(vector<record> &records)
 }
 
 void printrecord(record out)
-{
+{// funtion for creating binding output to console in format:
+//  MAC IP startdate_starttime enddate_endtime
+//  c8:0a:a9:cd:7d:81 192.168.0.101 2016-09-29_13:45 2016-09-29_15:45
     for (size_t i = 0; i < MAC_SIZE; i++)
     {
         char c='\0';
         (i == MAC_SIZE - 1) ? c=' ' : c=':';
         cout << setw(2) << setfill ('0') << hex << +out.chaddr[i] << c << dec;
     }
-    //c8:0a:a9:cd:7d:81 192.168.0.101 2016-09-29_13:45 2016-09-29_15:45
     cout << inet_ntoa(*(struct in_addr*) &out.host_ip);
     struct tm * timeinfo;
     timeinfo = localtime (&out.reserv_start);
@@ -186,11 +206,8 @@ void printrecord(record out)
 }
 
 bool from_scope(uint32_t desired_ip, scope_settings* scope)
-{
-    uint32_t min = scope->srv_addr;
-    uint32_t max = scope->broadcast;
-    uint32_t tmp = desired_ip;
-    return (min < tmp && tmp < max);
+{// check whether ip is from given scope or not
+    return (scope->srv_addr < desired_ip && desired_ip < scope->broadcast);
 }
 
 uint32_t get_info(uint8_t* options, uint8_t info_len, uint32_t info_type)
@@ -305,7 +322,7 @@ uint32_t get_ip_addr(scope_settings* scope, uint32_t ip)
 }
 
 size_t record_position(record item, vector<record> list, int by)
-{
+{// return record position if fits MAC or IP address of record
     size_t index = 0;
     for ( auto i = list.begin(); i < list.end(); i++, index++)
     {
@@ -325,7 +342,7 @@ size_t record_position(record item, vector<record> list, int by)
 }
 
 void delete_record(record item, vector<record> &list)
-{
+{// function to remove bninding records to mac address
     size_t pos;
     while ( (pos = record_position(item, list, MAC_SIZE)) != list.size())
     {
