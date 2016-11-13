@@ -18,6 +18,7 @@ bool handle_request(scope_settings* scope, int* s)
     socklen_t c_len = sizeof(c_addr);
     vector<record> records;
     record new_record;
+    new_record.permanent = false;
     response info;
     uint32_t offered_ip = UINT32_MAX;
     if (scope->static_reserv && err_parse_file(records, scope))
@@ -88,10 +89,7 @@ bool handle_request(scope_settings* scope, int* s)
                 if (! item_in_list(new_record.host_ip, scope->exclude_list) && resp_type != DHCPNAK)
                     scope->exclude_list.insert(scope->exclude_list.end(), new_record.host_ip);
                 new_record.reserv_start = time(nullptr);
-                if (new_record.permanent)
-                    new_record.reserv_end = UINT32_MAX;
-                else
-                    new_record.reserv_end = new_record.reserv_start + info.lease_time;
+                new_record.reserv_end = new_record.reserv_start + info.lease_time;
                 offered_ip = new_record.host_ip;
             }
             struct sockaddr_in br_addr;
@@ -145,7 +143,8 @@ bool handle_request(scope_settings* scope, int* s)
                 (i == MAC_SIZE - 1) ? c=' ' : c=':';
                 cout << setw(2) << setfill ('0') << hex << +item.chaddr[i] << c << dec;
             }
-            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record" << endl;
+            cout << inet_ntoa(*(struct in_addr*)&item.host_ip) << "\t in record";
+            cout << "Permanent :" << (item.permanent) << endl;
         }
         cout << "----------|||||---------\n";
     }
@@ -160,14 +159,12 @@ bool err_parse_file(vector<record> &records, scope_settings* scope)
         size_t pos;
         record perm;
         perm.permanent = true;
-        uint8_t chaddr[MAX_DHCP_CHADDR_LENGTH];
-        uint32_t ip_addr;
         string line;
         string token;
         string delimiter = " ";
+        perm.reserv_end = numeric_limits<time_t>::max();
         while (getline(perm_reserv,line))
         {
-            cout<< line<<endl;
             if ((pos = line.find(delimiter)) == string::npos)
             {
                 cerr << ERR_FILE_IN;
@@ -175,7 +172,7 @@ bool err_parse_file(vector<record> &records, scope_settings* scope)
             }
             token = line.substr(0, pos);
             line.erase(0, pos + delimiter.length());
-            if (check_mac(token, chaddr))
+            if (check_mac(token, perm.chaddr))
             {
                 cerr << ERR_FILE_IN;
                 return EXIT_FAILURE;
@@ -183,19 +180,14 @@ bool err_parse_file(vector<record> &records, scope_settings* scope)
             pos = token.length();
             token = line.substr(0, pos);
             line.erase(0, pos + delimiter.length());
-            ip_addr = inet_addr(token.c_str());
-            if (! from_scope(ip_addr, scope))
+            perm.host_ip = inet_addr(token.c_str());
+            if (! from_scope(perm.host_ip, scope) || line != "")
             {
                 cerr << ERR_FILE_IN;
                 return EXIT_FAILURE;
             }
-            std::cout << token << std::endl;
-
-            if (line != "")
-            {
-                cerr << ERR_FILE_IN;
-                return EXIT_FAILURE;
-            }
+            records.insert(records.end(), perm);
+            scope->exclude_list.insert(scope->exclude_list.end(), perm.host_ip);
         }
         perm_reserv.close();
     }
@@ -222,7 +214,7 @@ bool check_mac(string in, uint8_t * chaddr)
         chaddr[pos++] = stoi(token, 0, 16);
         i++;
     }
-    chaddr[pos++] = std::stoi(in, 0, 16);
+    chaddr[pos++] = stoi(in, 0, 16);
     return (i > MAC_SIZE - 1 || in.length() != 2) ? EXIT_FAILURE :EXIT_SUCCESS;
 }
 
@@ -231,7 +223,7 @@ void delete_expired(vector<record> &records, scope_settings* scope)
     time_t time_now = time(nullptr);
     for (auto item : records)
     {
-        if (item.reserv_end < time_now)
+        if (item.reserv_end < time_now && ! item.permanent)
         {
             delete_record(item, records);
             return_ip_to_scope(item.host_ip, scope);
