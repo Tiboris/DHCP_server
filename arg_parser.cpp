@@ -1,7 +1,8 @@
+// Author Tibor Dudlák xdudla00@stud.fit.vutbr.cz
 #include "arg_parser.hpp"
 /*
- *  Argument parser for dserver.cpp as school project to ISA class
- */
+*  Argument parser for dserver.cpp as school project to ISA class
+*/
 using namespace std;
 
 bool arg_err(char option, char* optarg_val, scope_settings* scope)
@@ -25,15 +26,15 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
         try
         {
             for (auto i = tmp.begin(); i != tmp.end(); i++)
-            {
+            {// check string for digits
                 if (!isdigit(*i))
                     throw EXIT_FAILURE;
             }
-            cmask = stoul(tmp,nullptr,10);
+            cmask = stoul(tmp,nullptr,10);  //stuol throw exception when fails
             if ((cmask == 0) || (cmask > 30 ))
                 throw EXIT_FAILURE;
         }
-        catch (...)
+        catch (...) // catch any exception
         {
             cerr << "CIRD mask '/" << tmp << "' NOT supported."<< endl;
             return EXIT_FAILURE;
@@ -116,7 +117,7 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
                     return EXIT_FAILURE;
                 }
                 pflag++;    // to check if there are multiple options like this
-                max_argc_val += 2;  // to check for right number of arguments
+                max_argc_val += 2;  // for checking right number of arguments
                 break;
 
             case 'e':
@@ -165,7 +166,7 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
         }
     }
     if (argc > max_argc_val)
-    {
+    {// to check for right number of arguments
         cerr << ERR_OPT;
         for (int i = max_argc_val; i < argc; i++)
         {
@@ -178,13 +179,13 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
 }
 
 uint32_t strtoip(const char* ip_in)
-{
+{// converts c string to uint32_t ip address
     struct in_addr ip_addr;
     return (inet_aton(ip_in, &ip_addr) == 0) ? UINT32_MAX : ip_addr.s_addr;
 }
 
 void cut(char* src, size_t from, size_t to, char* dst)
-{
+{// cut c string from and to are indexes of start and end of substring
     size_t i;
     for (i = from; i < to ; i++)
     {

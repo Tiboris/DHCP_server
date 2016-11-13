@@ -28,5 +28,7 @@ dserver
 *.exe
 *.out
 *.app
+
+# Text files
 *.pdf
 *.txt

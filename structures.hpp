@@ -1,3 +1,4 @@
+// Author Tibor Dudlák xdudla00@stud.fit.vutbr.cz
 #ifndef STRUCTURES_HPP
 #define STRUCTURES_HPP
 
@@ -7,8 +8,8 @@ using namespace std;
 
 #define PORT                    67
 #define CLI_PORT                68
-#define MAX_DHCP_CHADDR_LENGTH  16
 #define MAX_DHCP_SNAME_LENGTH   64
+#define MAX_DHCP_CHADDR_LENGTH  16
 #define MAX_DHCP_FILE_LENGTH    128
 #define MAX_DHCP_OPTIONS_LENGTH 312
 
@@ -20,7 +21,7 @@ typedef struct scope_settings_struct
     vector<uint32_t> exclude_list;  /* excluded ip addresses */
     uint32_t first_addr;            /* first available address */
     uint32_t broadcast;             /* broadcast address */
-    bool static_reserv = false;
+    bool static_reserv = false;     /* flag for enabling static bind*/
     string filename;
 } scope_settings;
 
@@ -30,7 +31,7 @@ typedef struct record_struct
     uint8_t     chaddr [MAX_DHCP_CHADDR_LENGTH];     /* MAC addr */
     time_t      reserv_start;                        /* start type */
     time_t      reserv_end;                          /* ending time */
-    bool        permanent = false;
+    bool        permanent = false;                   /* permanent record flag */
 } __attribute__ ((packed)) record;
 
 typedef struct struct_dhcp_packet
@@ -48,8 +49,8 @@ typedef struct struct_dhcp_packet
     uint32_t giaddr;               /* IP address of DHCP relay */
     uint8_t  chaddr [MAX_DHCP_CHADDR_LENGTH];    /* hardware address of client machine */
     uint8_t  sname [MAX_DHCP_SNAME_LENGTH];      /* name of DHCP server */
-    uint8_t  file [MAX_DHCP_FILE_LENGTH];        /* boot file name (used for diskless booting?) */
-    uint8_t  options [MAX_DHCP_OPTIONS_LENGTH];  /* options */
+    uint8_t  file [MAX_DHCP_FILE_LENGTH];        /* boot file name */
+    uint8_t  options [MAX_DHCP_OPTIONS_LENGTH];  /* options starting with magic cookie*/
 } __attribute__ ((packed)) dhcp_packet;
 
 #endif

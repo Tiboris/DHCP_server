@@ -1,6 +1,6 @@
+// Author Tibor Dudlák xdudla00@stud.fit.vutbr.cz
 #include <csignal>
 #include <iostream>
-
 #include "structures.hpp"
 #include "arg_parser.hpp"
 #include "req_handler.hpp"
@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     {// if there are wrong arguments program fails on startup
         return EXIT_FAILURE;
     }
-    // handling server run
+    // handling server run and parsing file
     return handle_request(&scope, &srv_socket);
 }
 /*
@@ -35,6 +35,6 @@ void sig_handler(int signal)
         cout << "Closing server socket...\n";
         close(srv_socket);
     }
-    
+    // exiting successfuly after signal
     exit(EXIT_SUCCESS);
 }

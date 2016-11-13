@@ -1,3 +1,4 @@
+// Author Tibor Dudlák xdudla00@stud.fit.vutbr.cz
 #ifndef ARG_PARSER_HPP
 #define ARG_PARSER_HPP
 
@@ -10,15 +11,16 @@
 
 #include "structures.hpp"
 
-#define USAGE "\tusage: ./dserver -p <network_address/CIRD> [-e <ip_address_list>]\n"
-#define ERR_NO_ARGS "./dserver: at least option -- 'p' is needed\n"
-#define ERR_MULTIPLE_OPT "./dserver: not allowed multiple usage of option -- "
-#define ERR_CHAR "Unknown option character has been given"
 #define ERR_ARG_1 "./dserver: option's -- '"
 #define ERR_ARG_2 "' argument in wrong format\n"
 #define ERR_OPT "./dserver: invalid option(s) "
 #define ERR_IP_FORMAT "Wrong IP address format: "
 #define ERR_NET "' is NOT valid network address.\n"
+#define ERR_CHAR "Unknown option character has been given"
+#define ERR_NO_ARGS "./dserver: at least option -- 'p' is needed\n"
+#define ERR_MULTIPLE_OPT "./dserver: not allowed multiple usage of option -- "
+#define USAGE "\tusage: ./dserver -p <network_address/CIRD> [-e <ip_address_list>]\n"
+
 
 using namespace std;
 

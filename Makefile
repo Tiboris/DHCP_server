@@ -1,3 +1,4 @@
+# Author Tibor Dudlák xdudla00@stud.fit.vutbr.cz
 CXX = g++
 CXXFLAGS = -O3 -g -Wall -Wextra -pedantic -std=c++11
 
