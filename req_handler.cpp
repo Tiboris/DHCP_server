@@ -4,8 +4,6 @@
  */
 using namespace std;
 
-//regex mac_ip("(([0-9a-fA-F][0-9a-fA-F]:){5}[0-9a-fA-F][0-9a-fA-F]) ((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])[.]){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))");
-
 // 00:0b:82:01:fc:42 192.168.0.99
 // c8:0a:a9:cd:7d:81 192.168.0.101
 
@@ -22,8 +20,8 @@ bool handle_request(scope_settings* scope, int* s)
     record new_record;
     response info;
     uint32_t offered_ip = UINT32_MAX;
-    // if (scope->static_reserv && err_file(scope))
-    //     return EXIT_FAILURE;
+    if (scope->static_reserv && err_parse_file(records, scope))
+        return EXIT_FAILURE;
     while (true)
     {
         size_t id;
@@ -154,25 +152,79 @@ bool handle_request(scope_settings* scope, int* s)
     return EXIT_SUCCESS;
 }
 
-// bool err_file(scope_settings* scope)
-// {
-//     string line;
-//     ifstream perm_reserv (scope->filename);
-//     if (perm_reserv.is_open())
-//     {
-//         while (getline(perm_reserv,line))
-//         {
-//             cout << line << '\n'; // there should be check for every line in file
-//         }
-//         perm_reserv.close();
-//     }
-//     else
-//     {
-//         cerr << "Error opening file" << endl;
-//         return EXIT_FAILURE;
-//     }
-//     return EXIT_SUCCESS;
-// }
+bool err_parse_file(vector<record> &records, scope_settings* scope)
+{
+    ifstream perm_reserv (scope->filename);
+    if (perm_reserv.is_open())
+    {
+        size_t pos;
+        record perm;
+        perm.permanent = true;
+        uint8_t chaddr[MAX_DHCP_CHADDR_LENGTH];
+        uint32_t ip_addr;
+        string line;
+        string token;
+        string delimiter = " ";
+        while (getline(perm_reserv,line))
+        {
+            cout<< line<<endl;
+            if ((pos = line.find(delimiter)) == string::npos)
+            {
+                cerr << ERR_FILE_IN;
+                return EXIT_FAILURE;
+            }
+            token = line.substr(0, pos);
+            line.erase(0, pos + delimiter.length());
+            if (check_mac(token, chaddr))
+            {
+                cerr << ERR_FILE_IN;
+                return EXIT_FAILURE;
+            }
+            pos = token.length();
+            token = line.substr(0, pos);
+            line.erase(0, pos + delimiter.length());
+            ip_addr = inet_addr(token.c_str());
+            if (! from_scope(ip_addr, scope))
+            {
+                cerr << ERR_FILE_IN;
+                return EXIT_FAILURE;
+            }
+            std::cout << token << std::endl;
+
+            if (line != "")
+            {
+                cerr << ERR_FILE_IN;
+                return EXIT_FAILURE;
+            }
+        }
+        perm_reserv.close();
+    }
+    else
+    {
+        cerr << "Error opening file for static bindings: " << scope->filename << endl;
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+bool check_mac(string in, uint8_t * chaddr)
+{
+    size_t cut = 0, pos = 0,i = 0;
+    string token;
+    string delimiter = ":";
+    memset(chaddr, 0, MAX_DHCP_CHADDR_LENGTH);
+    while ((cut = in.find(delimiter)) != string::npos)
+    {
+        token = in.substr(0, cut);
+        in.erase(0, cut + delimiter.length());
+        if (token.length() != 2)
+            return EXIT_FAILURE;
+        chaddr[pos++] = stoi(token, 0, 16);
+        i++;
+    }
+    chaddr[pos++] = std::stoi(in, 0, 16);
+    return (i > MAC_SIZE - 1 || in.length() != 2) ? EXIT_FAILURE :EXIT_SUCCESS;
+}
 
 void delete_expired(vector<record> &records, scope_settings* scope)
 {// funtion deletes expired bindings from records
@@ -189,8 +241,8 @@ void delete_expired(vector<record> &records, scope_settings* scope)
 
 void printrecord(record out)
 {// funtion for creating binding output to console in format:
-//  MAC IP startdate_starttime enddate_endtime
-//  c8:0a:a9:cd:7d:81 192.168.0.101 2016-09-29_13:45 2016-09-29_15:45
+    //  MAC IP startdate_starttime enddate_endtime
+    //  c8:0a:a9:cd:7d:81 192.168.0.101 2016-09-29_13:45 2016-09-29_15:45
     for (size_t i = 0; i < MAC_SIZE; i++)
     {
         char c='\0';

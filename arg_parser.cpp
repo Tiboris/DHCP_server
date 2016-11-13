@@ -11,7 +11,7 @@ bool arg_err(char option, char* optarg_val, scope_settings* scope)
     {
         string delimiter = "/";
         string tmp = static_cast<string>(optarg_val);
-        if ((pos =  tmp.find(delimiter)) == string::npos)
+        if ((pos = tmp.find(delimiter)) == string::npos)
             return EXIT_FAILURE;
         char result[INET_ADDRSTRLEN];
         cut(optarg_val, 0, pos, result);                        //eg:
@@ -97,10 +97,10 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
     }
     uint32_t pflag = 0;
     uint32_t eflag = 0;
-    //uint32_t sflag = 0;
+    uint32_t sflag = 0;
     int max_argc_val = 1;
     int c;
-    while ((c = getopt (argc, argv, "p:e:")) != -1)
+    while ((c = getopt (argc, argv, "p:e:s:")) != -1)
     {
         switch (c)
         {
@@ -134,25 +134,25 @@ bool opt_err(int argc, char** argv, scope_settings* scope)
                 max_argc_val += 2;
                 break;
 
-            // case 's':
-            //     if (sflag)
-            //     {
-            //         cerr << ERR_MULTIPLE_OPT << (char)c << endl << USAGE;
-            //         return EXIT_FAILURE;
-            //     }
-            //     if (optarg == '\0')
-            //     {
-            //         cerr << ERR_ARG_1 << (char)c << ERR_ARG_2 << USAGE;
-            //         return EXIT_FAILURE;
-            //     }
-            //     else
-            //     {
-            //         scope->filename = optarg;
-            //         scope->static_reserv = !scope->static_reserv;
-            //     }
-            //     eflag++;
-            //     max_argc_val += 2;
-            //     break;
+            case 's':
+                if (sflag)
+                {
+                    cerr << ERR_MULTIPLE_OPT << (char)c << endl << USAGE;
+                    return EXIT_FAILURE;
+                }
+                if (optarg == '\0')
+                {
+                    cerr << ERR_ARG_1 << (char)c << ERR_ARG_2 << USAGE;
+                    return EXIT_FAILURE;
+                }
+                else
+                {
+                    scope->filename = optarg;
+                    scope->static_reserv = !scope->static_reserv;
+                }
+                eflag++;
+                max_argc_val += 2;
+                break;
 
             case '?':
                 if (! isprint (optopt)) // if option is not printable character

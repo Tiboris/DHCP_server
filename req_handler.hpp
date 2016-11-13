@@ -4,7 +4,6 @@
 #include <iostream>
 #include <cstdio>
 #include <ctime>
-#include <regex>
 #include <fstream>
 #include <iomanip>
 #include <unistd.h>
@@ -41,6 +40,8 @@
 
 #define HOUR                3600            // hour in seconds
 
+#define ERR_FILE_IN         "Error: input file ine wrong format\n"
+
 typedef struct response_struct
 {
     uint32_t magic_cookie   = COOKIE;
@@ -58,7 +59,7 @@ int create_socket();
 
 void printrecord(record out);
 
-//bool err_file(scope_settings* scope);
+bool check_mac(string in, uint8_t * chaddr);
 
 bool handle_request(scope_settings* scope, int* s);
 
@@ -75,6 +76,8 @@ bool from_scope(uint32_t desired_ip, scope_settings* scope);
 size_t record_position(record item, vector<record> list, int by);
 
 dhcp_packet save_request(scope_settings* scope, uint8_t* packet);
+
+bool err_parse_file(vector<record> &records, scope_settings* scope);
 
 void delete_expired(vector<record> &records, scope_settings* scope);
 
