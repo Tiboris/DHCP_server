@@ -30,6 +30,7 @@ MAC_ADDRESS IP_ADDRESS (eg: static.txt)
 08:00:27:3a:9d:a3 192.168.8.102
 ```
 ####List Of Files:
+* manual.pdf
 * README
 * README.md
 * Makefile
